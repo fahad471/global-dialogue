@@ -33,6 +33,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Signup from './components/Signup';
 import Login from './components/Login';
 import ProfileForm from './components/ProfileForm';
+import ChatRoom from './components/ChatRoom';
+import MatchPreferences from './components/MatchPreferences';
 
 function App() {
   return (
@@ -42,6 +44,8 @@ function App() {
         <Route path="/signup" element={<Signup />} />
         <Route path="/login" element={<Login />} />
         <Route path="/profile" element={<ProfileForm />} />
+        <Route path="/chat" element={<ChatRoom />} />
+        <Route path="/matchpreferences" element={<MatchPreferences />} />
         {/* other routes */}
       </Routes>
     </Router>
