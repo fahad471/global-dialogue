@@ -84,6 +84,7 @@ import { useTopics } from '../hooks/useTopics';
 
 export default function MatchPreferences() {
   const { user } = useAuth();
+  if (!user) return <div>Please log in to edit your profile.</div>;
   const topics = useTopics();
 
   const [matchType, setMatchType] = useState('');

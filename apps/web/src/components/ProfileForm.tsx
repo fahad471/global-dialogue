@@ -7,6 +7,7 @@ const beliefs = ["Pro-market", "Eco-conscious", "Transhumanist"];
 
 export default function ProfileForm() {
   const { user } = useAuth();
+  if (!user) return <div>Please log in to edit your profile.</div>;
   const [stance, setStance] = useState('');
   const [selectedBeliefs, setBeliefs] = useState<string[]>([]);
   const [mbti, setMbti] = useState('');

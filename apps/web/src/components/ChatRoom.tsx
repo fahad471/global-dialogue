@@ -9,16 +9,17 @@ const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 type Props = {
-  preferences: any;
+  preferences?: any;
 };
 
 export default function ChatRoom({ preferences }: Props) {
   const { user } = useAuth();
+  if (!user) return <div>Please log in to edit your profile.</div>;
   const [input, setInput] = useState('');
   const { connected, messages, sendMessage, peerId, roomId } = useWebSocket(
     'ws://localhost:8080',
     user?.id || '',
-    preferences
+    preferences || {}
   );
 
   const [peerEmail, setPeerEmail] = useState<string | null>(null);
