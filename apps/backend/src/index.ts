@@ -17,25 +17,19 @@
 // app.listen(PORT, () => {
 //   console.log(`Server is listening on port ${PORT}`)
 // })
-import WebSocket, { WebSocketServer } from 'ws';
-import { createMatchmaker } from './matchmaker';
+import WebSocket from 'ws';
+import 'dotenv/config';
+import { createMatchmaker } from './matchmaker/matchmaker';
 
-
-const PORT = process.env.PORT ? Number(process.env.PORT) : 8080;
-
-const wss = new WebSocketServer({ port: PORT });
+const wss = new WebSocket.Server({ port: 8080 });
 const matchmaker = createMatchmaker();
 
 wss.on('connection', (ws) => {
-  console.log('Client connected');
-
-  // Attach to matchmaker
   matchmaker.addClient(ws);
 
   ws.on('close', () => {
-    console.log('Client disconnected');
     matchmaker.removeClient(ws);
   });
 });
 
-console.log(`WebSocket server running on ws://localhost:${PORT}`);
+console.log('WebSocket server running on ws://localhost:8080');
