@@ -7,6 +7,7 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
   const [peerId, setPeerId] = useState<string | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
 
+  // Effect to establish WebSocket connection — depends only on userId and url
   useEffect(() => {
     if (!userId) return;
 
@@ -15,7 +16,7 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
 
     ws.onopen = () => {
       setConnected(true);
-      // Send init with user info and preferences
+      // Send initial user info and preferences once connection opens
       ws.send(
         JSON.stringify({
           type: 'init',
@@ -41,11 +42,25 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
       setRoomId(null);
     };
 
+    // Cleanup on unmount or userId/url change
     return () => {
       ws.close();
     };
-  }, [userId, url, preferences]);
+  }, [userId, url]);
 
+  // Effect to send preferences updates when preferences change, but connection is open
+  useEffect(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(
+        JSON.stringify({
+          type: 'updatePreferences',
+          preferences,
+        })
+      );
+    }
+  }, [preferences]);
+
+  // Function to send chat messages over the WebSocket
   const sendMessage = (message: string) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'chat', message }));
