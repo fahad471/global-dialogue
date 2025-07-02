@@ -38,7 +38,6 @@ import MatchPreferences from './components/MatchPreferences';
 
 function App() {
   return (
-    <Router>
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -48,7 +47,6 @@ function App() {
         <Route path="/matchpreferences" element={<MatchPreferences />} />
         {/* other routes */}
       </Routes>
-    </Router>
   );
 }
 
