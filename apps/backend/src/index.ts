@@ -27,9 +27,14 @@ const matchmaker = createMatchmaker();
 wss.on('connection', (ws) => {
   matchmaker.addClient(ws);
 
-  ws.on('close', () => {
-    matchmaker.removeClient(ws);
-  });
+ws.on('close', () => {
+  const userId = matchmaker.getUserIdByWs(ws);
+  if (userId) {
+    matchmaker.removeClient(userId);
+  } else {
+    console.error('UserId not found for websocket');
+  }
+});
 });
 
 console.log('WebSocket server running on ws://localhost:8080');
