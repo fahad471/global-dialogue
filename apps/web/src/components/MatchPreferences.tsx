@@ -83,7 +83,12 @@ import { useAuth } from '../context/AuthProvider';
 import { useTopics } from '../hooks/useTopics';
 
 export default function MatchPreferences() {
-  const { user } = useAuth();
+  const auth = useAuth();
+  if (!auth || !auth.user) {
+    return <div>Please log in</div>;
+  }
+  const { user } = auth;
+
   if (!user) return <div>Please log in to edit your profile.</div>;
   const topics = useTopics();
 

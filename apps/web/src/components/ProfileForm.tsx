@@ -6,8 +6,12 @@ const ideologies = ["Conservative", "Socialist", "Centrist", "Anarchist"];
 const beliefs = ["Pro-market", "Eco-conscious", "Transhumanist"];
 
 export default function ProfileForm() {
-  const { user } = useAuth();
-  if (!user) return <div>Please log in to edit your profile.</div>;
+  const auth = useAuth();
+  if (!auth || !auth.user) {
+    return <div>Please log in</div>;
+  }
+  const { user } = auth;
+
   const [stance, setStance] = useState('');
   const [selectedBeliefs, setBeliefs] = useState<string[]>([]);
   const [mbti, setMbti] = useState('');

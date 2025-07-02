@@ -13,8 +13,11 @@ type Props = {
 };
 
 export default function ChatRoom({ preferences }: Props) {
-  const { user } = useAuth();
-  if (!user) return <div>Please log in to edit your profile.</div>;
+  const auth = useAuth();
+  if (!auth || !auth.user) {
+    return <div>Please log in</div>;
+  }
+  const { user } = auth;
   const [input, setInput] = useState('');
   const { connected, messages, sendMessage, peerId, roomId } = useWebSocket(
     'ws://localhost:8080',
