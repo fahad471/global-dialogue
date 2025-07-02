@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = 'https://YOUR_SUPABASE_PROJECT.supabase.co';
 const supabaseAnonKey = 'YOUR_SUPABASE_ANON_KEY';
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const wsUrl = import.meta.env.VITE_WS_URL;
 
 type Props = {
   preferences?: any;
@@ -20,7 +21,7 @@ export default function ChatRoom({ preferences }: Props) {
   const { user } = auth;
   const [input, setInput] = useState('');
   const { connected, messages, sendMessage, peerId, roomId } = useWebSocket(
-    'ws://localhost:8080',
+    wsUrl,
     user?.id || '',
     preferences || {}
   );
