@@ -21,7 +21,9 @@ export default function TopNav({ signOut }: TopNavProps) {
           alt="Zyleno Logo"
           className="h-10 w-10 object-contain select-none"
         />
-        <span className="text-xl font-bold text-gray-900 dark:text-gray-100">Zyleno</span>
+        <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
+          Zyleno
+        </span>
       </div>
 
       {/* Right controls */}
@@ -47,14 +49,14 @@ export default function TopNav({ signOut }: TopNavProps) {
         </button>
 
         <button
-        onClick={signOut}
-        className="flex items-center gap-2 bg-purpl hover:bg-tel text-white font-semibold px-4 py-2 rounded-md transition"
-        title="Sign Out"
+          onClick={signOut}
+          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-md transition"
+          title="Sign Out"
         >
-        <FaSignOutAlt />
-        Sign Out
+          <FaSignOutAlt />
+          Sign Out
         </button>
-            </div>
-            </header>
-        );
-        }
+      </div>
+    </header>
+  );
+}

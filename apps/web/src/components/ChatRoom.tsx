@@ -4,17 +4,16 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { supabase } from '../lib/supabaseClient';
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
-import { useTheme } from "../context/themeContext";
 
 const wsUrl = import.meta.env.VITE_WS_URL;
 
 type Props = {
   preferences?: any;
+  signOut: () => Promise<void>;
 };
 
-export default function ChatRoom({ preferences }: Props) {
+export default function ChatRoom({ preferences, signOut }: Props) {
   const auth = useAuth();
-  const { theme, toggleTheme } = useTheme();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   if (!auth || !auth.user) {
@@ -59,11 +58,9 @@ export default function ChatRoom({ preferences }: Props) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  if (!user) return <div>Please log in</div>;
-
   return (
-    <div className="min-h-screen flex flex-col bg-smokyWhite dark:bg-jetBlack text-jetBlack dark:text-smokyWhite transition-colors duration-300">
-      <TopNav theme={theme} toggleTheme={toggleTheme} signOut={() => Promise.resolve()} />
+    <div className="min-h-screen flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
+      <TopNav signOut={signOut} />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />

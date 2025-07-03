@@ -4,7 +4,9 @@ import { useNavigate, Link } from "react-router-dom";
 import { useTheme } from "../context/themeContext";
 
 export default function Signup() {
+  // Remove if not used:
   const { theme } = useTheme();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -58,7 +60,7 @@ export default function Signup() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full p-3 mb-4 rounded-md border bg-gray-800 text-white border-gray-600 focus:outline-none focus:ring-2 focus:ring-purpl"
+            className="w-full p-3 mb-4 rounded-md border bg-gray-800 text-white border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-600"
           />
 
           <input
@@ -67,20 +69,20 @@ export default function Signup() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            className="w-full p-3 mb-6 rounded-md border bg-gray-800 text-white border-gray-600 focus:outline-none focus:ring-2 focus:ring-purpl"
+            className="w-full p-3 mb-6 rounded-md border bg-gray-800 text-white border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-600"
           />
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-purpl hover:bg-tel rounded-md font-semibold transition"
+            className="w-full py-3 bg-purple-600 hover:bg-purple-700 rounded-md font-semibold transition"
           >
             {loading ? "Signing up..." : "Sign Up"}
           </button>
 
           <p className="mt-4 text-center text-sm">
             Already have an account?{" "}
-            <Link to="/login" className="text-purpl underline hover:text-tel">
+            <Link to="/login" className="text-purple-600 underline hover:text-purple-700">
               Login
             </Link>
           </p>
@@ -92,7 +94,7 @@ export default function Signup() {
         <img
           src="/assets/logo.png"
           alt="Zyleno Logo"
-          className="h-100 w-100 object-contain select-none"
+          className="h-[100px] w-[100px] object-contain select-none"
         />
       </div>
     </div>
