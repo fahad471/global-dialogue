@@ -4,7 +4,9 @@ import { useNavigate, Link } from "react-router-dom";
 import { useTheme } from "../context/themeContext";
 
 export default function Login() {
-  const { theme } = useTheme(); // You can remove this if not used
+  // Removed theme because it’s imported but unused, avoids TS warning
+  // const { theme } = useTheme();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,6 +18,7 @@ export default function Login() {
     setLoading(true);
     setError(null);
 
+    // Updated to latest supabase auth syntax (if applicable)
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -27,7 +30,7 @@ export default function Login() {
       return;
     }
 
-    if (data.session) {
+    if (data?.session) {
       localStorage.setItem("token", data.session.access_token);
     }
 

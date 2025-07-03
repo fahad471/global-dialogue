@@ -1,12 +1,8 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useNavigate, Link } from "react-router-dom";
-import { useTheme } from "../context/themeContext";
 
 export default function Signup() {
-  // Remove if not used:
-  const { theme } = useTheme();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -30,6 +26,7 @@ export default function Signup() {
     }
 
     alert("Signup successful! Please check your email to confirm your account.");
+    setLoading(false); // <-- Added here
     navigate("/login");
   };
 

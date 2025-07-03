@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
 import "./index.css";
 import Signup from "./components/Signup";
@@ -9,13 +9,12 @@ import MatchPreferences from "./components/MatchPreferences";
 import Dashboard from "./pages/Dashboard";
 import AuthWrapper from "./components/AuthWrapper";
 import { supabase } from "./lib/supabaseClient";
-import { ThemeProvider } from "./context/themeContext"; // import your theme provider
+import { ThemeProvider } from "./context/themeContext";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const navigate = useNavigate();
 
-  // Setup auth state on mount and subscribe to changes
   useEffect(() => {
     // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -33,12 +32,12 @@ function App() {
       }
     );
 
+    // Correct cleanup: unsubscribe function directly
     return () => {
-      authListener.subscription?.unsubscribe();
+      authListener?.subscription?.unsubscribe();
     };
   }, []);
 
-  // Sign out function
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -53,7 +52,6 @@ function App() {
   return (
     <ThemeProvider>
       <Routes>
-        {/* Redirect root '/' to dashboard if authenticated */}
         <Route
           path="/"
           element={
@@ -96,6 +94,7 @@ function App() {
           path="/chat"
           element={
             <AuthWrapper isAuthenticated={isAuthenticated}>
+              {/* pass signOut here */}
               <ChatRoom signOut={signOut} />
             </AuthWrapper>
           }
@@ -104,6 +103,7 @@ function App() {
           path="/matchpreferences"
           element={
             <AuthWrapper isAuthenticated={isAuthenticated}>
+              {/* pass signOut here */}
               <MatchPreferences signOut={signOut} />
             </AuthWrapper>
           }

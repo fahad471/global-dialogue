@@ -7,7 +7,9 @@ interface TopNavProps {
 }
 
 export default function TopNav({ signOut }: TopNavProps) {
-  const { theme, toggleTheme } = useTheme();
+  const themeContext = useTheme();
+  const theme = themeContext?.theme ?? "light";
+  const toggleTheme = themeContext?.toggleTheme ?? (() => {});
 
   return (
     <header
