@@ -32,30 +32,33 @@ type AuthContextType = {
   user: any | null;
 };
 
-// Initialize context with `null` but typed as `AuthContextType | null`
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<any | null>(null);
 
   useEffect(() => {
+    // Get initial session user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Subscribe to auth changes
+    const unsubscribe = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    // Correct cleanup: call unsubscribe function, not .unsubscribe()
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, []);
 
   return <AuthContext.Provider value={{ user }}>{children}</AuthContext.Provider>;
 };
 
-// Now your hook must handle that context could be null (if used outside provider)
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
