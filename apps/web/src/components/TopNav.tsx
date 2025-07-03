@@ -1,16 +1,12 @@
-import React from "react";
 import { FaMoon, FaSun, FaSignOutAlt } from "react-icons/fa";
-import { useTheme } from "../context/themeContext";
 
 interface TopNavProps {
+  theme: "light" | "dark";
+  toggleTheme: () => void;
   signOut: () => Promise<void>;
 }
 
-export default function TopNav({ signOut }: TopNavProps) {
-  const themeContext = useTheme();
-  const theme = themeContext?.theme ?? "light";
-  const toggleTheme = themeContext?.toggleTheme ?? (() => {});
-
+export default function TopNav({ theme, toggleTheme, signOut }: TopNavProps) {
   return (
     <header
       className="w-full sticky top-0 z-50 shadow-md flex items-center justify-between px-6 py-3

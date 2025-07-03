@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useNavigate, Link } from "react-router-dom";
-import { useTheme } from "../context/themeContext";
+// import { useTheme } from "../context/themeContext";
 
 export default function Login() {
   // Removed theme because it’s imported but unused, avoids TS warning
