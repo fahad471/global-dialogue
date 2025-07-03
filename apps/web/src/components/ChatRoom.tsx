@@ -4,6 +4,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { supabase } from '../lib/supabaseClient';
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
+import { useTheme } from "../context/themeContext";
 
 const wsUrl = import.meta.env.VITE_WS_URL;
 
@@ -15,6 +16,7 @@ type Props = {
 export default function ChatRoom({ preferences, signOut }: Props) {
   const auth = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { theme, toggleTheme } = useTheme();
 
   if (!auth || !auth.user) {
     return <div>Please log in</div>;
@@ -60,7 +62,7 @@ export default function ChatRoom({ preferences, signOut }: Props) {
 
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
-      <TopNav signOut={signOut} />
+      <TopNav theme={theme} toggleTheme={toggleTheme} signOut={signOut} />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />

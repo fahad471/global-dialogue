@@ -1,15 +1,18 @@
 import React from "react";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
+import { useTheme } from "../context/themeContext";
 
 interface DashboardProps {
   signOut: () => Promise<void>;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ signOut }) => {
+  const { theme, toggleTheme } = useTheme();
+
   return (
     <div className="min-h-screen flex flex-col bg-white dark:bg-black text-gray-900 dark:text-gray-100 transition-colors duration-300">
-      <TopNav signOut={signOut} />
+      <TopNav theme={theme} toggleTheme={toggleTheme} signOut={signOut} />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
