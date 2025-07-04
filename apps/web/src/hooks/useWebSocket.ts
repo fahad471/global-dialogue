@@ -95,34 +95,28 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
-  // Helper to send signaling message over WebSocket
   const sendSignal = (signalType: string, data: any) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'signal', signalType, data }));
     }
   };
 
-  // Setup WebRTC peer connection
   const setupPeerConnection = (isInitiator: boolean) => {
     const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
     pcRef.current = pc;
 
-    // Add local tracks to connection
     if (localStreamRef.current) {
       localStreamRef.current.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current!));
     }
 
-    // Create or set remote stream
     const remoteStream = new MediaStream();
     remoteStreamRef.current = remoteStream;
     setRemoteStream(remoteStream);
 
-    // When remote track arrives, add it to remote stream
     pc.ontrack = (event) => {
       event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
     };
 
-    // ICE candidates handling
     pc.onicecandidate = (event) => {
       if (event.candidate) {
         sendSignal('candidate', event.candidate);
@@ -130,7 +124,6 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
     };
 
     if (isInitiator) {
-      // Create offer
       pc.createOffer()
         .then(offer => pc.setLocalDescription(offer))
         .then(() => {
@@ -140,7 +133,6 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
     }
   };
 
-  // Handle incoming signaling data
   const handleSignal = async (signalType: string, data: any) => {
     const pc = pcRef.current;
     if (!pc) return;
@@ -148,7 +140,6 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
     switch (signalType) {
       case 'offer':
         await pc.setRemoteDescription(new RTCSessionDescription(data));
-        // Create answer
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
         sendSignal('answer', pc.localDescription);
@@ -168,7 +159,6 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
     }
   };
 
-  // WebSocket effect
   useEffect(() => {
     if (!userId) return;
 
@@ -178,14 +168,12 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
     ws.onopen = async () => {
       setConnected(true);
 
-      // Request local media (video + audio)
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         localStreamRef.current = stream;
         setLocalStream(stream);
       } catch (err) {
         console.error('Error accessing media devices.', err);
-        // Fallback or notify user
       }
 
       ws.send(
@@ -203,10 +191,7 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
         setRoomId(data.roomId);
         setPeerId(data.peerId);
 
-        // Decide initiator by lex order (simple deterministic)
         const initiator = userId < data.peerId;
-
-        // Setup WebRTC connection
         setupPeerConnection(initiator);
       } else if (data.type === 'chat') {
         setMessages((prev) => [...prev, data.message]);
@@ -220,7 +205,6 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
       setPeerId(null);
       setRoomId(null);
 
-      // Cleanup peer connection and streams
       if (pcRef.current) {
         pcRef.current.close();
         pcRef.current = null;
@@ -237,13 +221,11 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
       }
     };
 
-    // Cleanup on unmount or userId/url change
     return () => {
       ws.close();
     };
   }, [userId, url]);
 
-  // Update preferences after connection opens
   useEffect(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(
@@ -270,5 +252,6 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
     roomId,
     localStream,
     remoteStream,
+    peerConnection: pcRef.current, // Optional, if you want to expose it
   };
 }
