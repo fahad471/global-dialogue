@@ -20,6 +20,7 @@
 import WebSocket from 'ws';
 import 'dotenv/config';
 import { createMatchmaker } from './matchmaker/matchmaker';
+import { supabaseAdmin as supabase } from './matchmaker/supabaseAdmin';
 
 const wss = new WebSocket.Server({ port: 8080 });
 const matchmaker = createMatchmaker();
@@ -27,14 +28,22 @@ const matchmaker = createMatchmaker();
 wss.on('connection', (ws) => {
   matchmaker.addClient(ws);
 
-ws.on('close', () => {
-  const userId = matchmaker.getUserIdByWs(ws);
-  if (userId) {
-    matchmaker.removeClient(userId);
-  } else {
-    console.error('UserId not found for websocket');
-  }
-});
+  ws.on('close', async () => {
+    const userId = matchmaker.getUserIdByWs(ws);
+    if (userId) {
+      // 📨 You can safely fetch user email here
+      const { data, error } = await supabase.auth.admin.getUserById(userId);
+      if (error) {
+        console.error(`Failed to fetch user ${userId}:`, error.message);
+      } else {
+        console.log(`Disconnected: ${data?.user?.email}`);
+      }
+
+      matchmaker.removeClient(userId);
+    } else {
+      console.error('UserId not found for websocket');
+    }
+  });
 });
 
 console.log('WebSocket server running on ws://localhost:8080');
