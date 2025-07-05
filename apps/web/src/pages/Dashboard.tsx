@@ -20,7 +20,7 @@ const Dashboard: React.FC<DashboardProps> = ({ signOut }) => {
         <main className="flex-1 p-12 overflow-y-auto">
           <section className="max-w-5xl mx-auto bg-surface rounded-3xl shadow-2xl p-12 text-center transition-colors duration-300">
             <h1 className="text-5xl font-extrabold mb-6">
-              Welcome to TalkSpot Dashboard
+              Welcome to MicSpot Dashboard
             </h1>
             <p className="text-xl max-w-3xl mx-auto leading-relaxed">
               This is your main hub to navigate matches, chats, rankings, and your

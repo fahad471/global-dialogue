@@ -81,7 +81,7 @@ export default function Signup() {
       <div className="flex-1 flex items-center justify-center">
         <img
           src="/assets/logo.png"
-          alt="TalkSpot Logo"
+          alt="MicSpot Logo"
           className="h-[375px] w-[375px] object-contain select-none"
         />
       </div>

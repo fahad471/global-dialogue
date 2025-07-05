@@ -13,10 +13,10 @@ export default function TopNav({ theme, toggleTheme, signOut }: TopNavProps) {
       <div className="flex items-center gap-3">
         <img
           src="/assets/logo.png"
-          alt="TalkSpot Logo"
+          alt="MicSpot Logo"
           className="h-10 w-10 object-contain select-none"
         />
-        <span className="text-xl font-bold text-text">TalkSpot</span>
+        <span className="text-xl font-bold text-text">MicSpot</span>
       </div>
 
       {/* Right controls */}
