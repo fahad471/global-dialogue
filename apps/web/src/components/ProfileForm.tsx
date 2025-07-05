@@ -6,7 +6,7 @@ import TopNav from "../components/TopNav";
 import { useTheme } from "../context/themeContext";
 
 const ideologies = ["Conservative", "Socialist", "Centrist", "Anarchist"];
-const beliefs = ["Pro-market", "Eco-conscious", "Transhumanist"];
+const beliefs = ["Pro-market", "Eco-conscious", "humanist"];
 
 interface ProfileFormProps {
   signOut: () => Promise<void>;
