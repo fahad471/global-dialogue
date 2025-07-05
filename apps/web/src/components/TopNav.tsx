@@ -8,20 +8,15 @@ interface TopNavProps {
 
 export default function TopNav({ theme, toggleTheme, signOut }: TopNavProps) {
   return (
-    <header
-      className="w-full sticky top-0 z-50 shadow-md flex items-center justify-between px-6 py-3
-                 bg-white dark:bg-black transition-colors duration-300"
-    >
+    <header className="w-full sticky top-0 z-50 shadow-md flex items-center justify-between px-6 py-3 bg-surface text-text transition-colors duration-300">
       {/* Left - Logo and Site name */}
       <div className="flex items-center gap-3">
         <img
           src="/assets/logo.png"
-          alt="Zyleno Logo"
+          alt="TalkSpot Logo"
           className="h-10 w-10 object-contain select-none"
         />
-        <span className="text-xl font-bold text-gray-900 dark:text-gray-100">
-          Zyleno
-        </span>
+        <span className="text-xl font-bold text-text">TalkSpot</span>
       </div>
 
       {/* Right controls */}
@@ -30,8 +25,7 @@ export default function TopNav({ theme, toggleTheme, signOut }: TopNavProps) {
           onClick={toggleTheme}
           aria-label="Toggle dark mode"
           title="Toggle dark mode"
-          className="flex items-center gap-2 rounded-md border border-gray-700 dark:border-gray-300 px-4 py-2
-                     text-gray-700 dark:text-gray-300 font-semibold hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+          className="flex items-center gap-2 rounded-md border border-secondaryText px-4 py-2 text-secondaryText font-semibold hover:bg-background transition"
         >
           {theme === "dark" ? (
             <>
@@ -48,7 +42,7 @@ export default function TopNav({ theme, toggleTheme, signOut }: TopNavProps) {
 
         <button
           onClick={signOut}
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white font-semibold px-4 py-2 rounded-md transition"
+          className="flex items-center gap-2 bg-primary hover:bg-accent text-text font-semibold px-4 py-2 rounded-md transition"
           title="Sign Out"
         >
           <FaSignOutAlt />

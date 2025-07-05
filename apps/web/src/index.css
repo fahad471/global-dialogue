@@ -1,12 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  --color-purpl: #5d5db9;
-  --color-tel: #16e0d4;
-  --color-bermuda: #78dcca;
-  --color-brand: #1E40AF;
+  --color-background: #1F1F1F;
+  --color-surface: #2F2A3A;
+  --color-primary: #4B1D3F;
+  --color-accent: #FF6B6B;
+  --color-text: #F7F4EF;
+  --color-secondaryText: #BFAACD;
 }
 
-.custom-gradient {
-  background: linear-gradient(to right, #5d5db9 5%, #000000 95%);
-}

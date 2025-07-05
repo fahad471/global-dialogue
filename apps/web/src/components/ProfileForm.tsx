@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { useAuth } from '../context/AuthProvider';
+import { useAuth } from "../context/AuthProvider";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useTheme } from "../context/themeContext";
@@ -17,13 +17,13 @@ export default function ProfileForm({ signOut }: ProfileFormProps) {
   const { theme, toggleTheme } = useTheme();
 
   if (!auth || !auth.user) {
-    return <div>Please log in</div>;
+    return <div className="text-text p-8">Please log in</div>;
   }
   const { user } = auth;
 
-  const [stance, setStance] = useState('');
+  const [stance, setStance] = useState("");
   const [selectedBeliefs, setBeliefs] = useState<string[]>([]);
-  const [mbti, setMbti] = useState('');
+  const [mbti, setMbti] = useState("");
 
   const toggleBelief = (b: string) => {
     setBeliefs((prev) =>
@@ -32,7 +32,7 @@ export default function ProfileForm({ signOut }: ProfileFormProps) {
   };
 
   const handleSubmit = async () => {
-    const { error } = await supabase.from('profiles').upsert({
+    const { error } = await supabase.from("profiles").upsert({
       id: user.id,
       ideological_stance: stance,
       core_beliefs: selectedBeliefs,
@@ -44,31 +44,35 @@ export default function ProfileForm({ signOut }: ProfileFormProps) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-smokyWhite dark:bg-jetBlack text-jetBlack dark:text-smokyWhite transition-colors duration-300">
+    <div className="min-h-screen flex flex-col bg-background text-text transition-colors duration-300">
       <TopNav theme={theme} toggleTheme={toggleTheme} signOut={signOut} />
 
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
 
         <main className="flex-1 p-12 overflow-y-auto">
-          <section className="max-w-3xl mx-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-10 transition-colors duration-300">
+          <section className="max-w-3xl mx-auto bg-surface rounded-3xl shadow-2xl p-10 transition-colors duration-300">
             <h1 className="text-4xl font-extrabold mb-8 text-center">Edit Profile</h1>
 
             <div className="space-y-6">
+              {/* Ideological Stance */}
               <div>
                 <label className="block mb-2 font-semibold text-lg">Ideological Stance</label>
                 <select
-                  className="w-full p-3 border rounded-md dark:bg-gray-800 dark:border-gray-700"
+                  className="w-full p-3 border rounded-md bg-background border-secondaryText text-text"
                   value={stance}
                   onChange={(e) => setStance(e.target.value)}
                 >
                   <option value="">Select ideology</option>
                   {ideologies.map((i) => (
-                    <option key={i} value={i}>{i}</option>
+                    <option key={i} value={i}>
+                      {i}
+                    </option>
                   ))}
                 </select>
               </div>
 
+              {/* Core Beliefs */}
               <div>
                 <label className="block mb-2 font-semibold text-lg">Core Beliefs</label>
                 <div className="flex flex-wrap gap-4">
@@ -78,7 +82,7 @@ export default function ProfileForm({ signOut }: ProfileFormProps) {
                         type="checkbox"
                         checked={selectedBeliefs.includes(b)}
                         onChange={() => toggleBelief(b)}
-                        className="rounded border-gray-300 dark:border-gray-600 dark:bg-gray-700"
+                        className="rounded border-secondaryText bg-background text-accent"
                       />
                       <span>{b}</span>
                     </label>
@@ -86,18 +90,20 @@ export default function ProfileForm({ signOut }: ProfileFormProps) {
                 </div>
               </div>
 
+              {/* MBTI Type */}
               <div>
                 <label className="block mb-2 font-semibold text-lg">MBTI Type</label>
                 <input
-                  className="w-full p-3 border rounded-md dark:bg-gray-800 dark:border-gray-700"
+                  className="w-full p-3 border rounded-md bg-background border-secondaryText text-text"
                   placeholder="MBTI Type (e.g. INTP)"
                   value={mbti}
                   onChange={(e) => setMbti(e.target.value)}
                 />
               </div>
 
+              {/* Submit Button */}
               <button
-                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
+                className="w-full py-3 bg-primary hover:bg-accent text-text font-semibold rounded-lg transition"
                 onClick={handleSubmit}
               >
                 Save Profile

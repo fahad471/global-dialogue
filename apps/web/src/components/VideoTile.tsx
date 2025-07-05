@@ -25,7 +25,7 @@ export default function VideoTile({ name, stream, muted = false }: Props) {
         muted={muted}
         className="w-full h-full object-cover"
       />
-      <div className="absolute bottom-0 left-0 bg-black bg-opacity-50 px-2 py-1 text-sm text-white">
+      <div className="absolute bottom-0 left-0 bg-black bg-opacity-50 px-2 py-1 text-sm text-text">
         {name}
       </div>
     </div>

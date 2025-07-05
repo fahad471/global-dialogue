@@ -36,7 +36,7 @@
 //   }, [messages]);
 
 //   return (
-//     <div className="min-h-screen flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
+//     <div className="min-h-screen flex flex-col bg-white dark:bg-black text-black dark:text-text transition-colors duration-300">
 //       <TopNav theme={theme} toggleTheme={toggleTheme} signOut={signOut} />
 
 //       <div className="flex flex-1 overflow-hidden">
@@ -123,7 +123,7 @@
 //   }, [messages]);
 
 //   return (
-//     <div className="min-h-screen flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
+//     <div className="min-h-screen flex flex-col bg-white dark:bg-black text-black dark:text-text transition-colors duration-300">
 //       <TopNav theme={theme} toggleTheme={toggleTheme} signOut={signOut} />
 
 //       <div className="flex flex-1 overflow-hidden">
@@ -298,21 +298,21 @@ export default function ChatRoom({ preferences, signOut }: Props) {
   const endCall = () => {
     localStream?.getTracks().forEach(track => track.stop());
     remoteStream?.getTracks().forEach(track => track.stop());
-    window.location.reload(); // or implement better cleanup
+    window.location.reload(); // Ideally replace with proper cleanup
   };
 
   if (!auth?.user) return <div>Please log in</div>;
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-black text-black dark:text-white transition-colors duration-300">
+    <div className="min-h-screen flex flex-col bg-background text-text transition-colors duration-300">
       <TopNav theme={theme} toggleTheme={toggleTheme} signOut={signOut} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
 
         <main className="flex-1 p-6 md:p-12 overflow-y-auto flex flex-col space-y-6">
-          <section className="max-w-5xl mx-auto bg-white dark:bg-gray-900 rounded-3xl shadow-2xl p-6 space-y-6 transition-colors duration-300">
+          <section className="max-w-5xl mx-auto bg-surface rounded-3xl shadow-2xl p-6 space-y-6 transition-colors duration-300">
             <h2 className="text-3xl font-bold">Chat Room</h2>
-            <p>Status: <span className={connected ? "text-green-500" : "text-red-500"}>{connected ? 'Connected' : 'Disconnected'}</span></p>
+            <p>Status: <span className={connected ? "text-success" : "text-error"}>{connected ? 'Connected' : 'Disconnected'}</span></p>
 
             {roomId ? (
               <>
@@ -332,15 +332,15 @@ export default function ChatRoom({ preferences, signOut }: Props) {
                   onShareScreen={shareScreen}
                 />
 
-                <div className="border border-gray-300 dark:border-gray-700 rounded-md p-4 overflow-y-auto h-40 bg-gray-50 dark:bg-gray-800">
+                <div className="border border-secondaryText rounded-md p-4 overflow-y-auto h-40 bg-muted">
                   {chatMessages.length === 0 ? (
-                    <p className="text-center text-gray-400">No messages yet</p>
+                    <p className="text-center text-tertiaryText">No messages yet</p>
                   ) : (
                     chatMessages.map((msg, i) => (
-                      <div key={i} className="text-sm bg-blue-100 dark:bg-blue-900 rounded-lg px-3 py-2 my-1 w-fit max-w-xs">
+                      <div key={i} className="text-sm bg-primary/10 dark:bg-primary/20 rounded-lg px-3 py-2 my-1 w-fit max-w-xs">
                         <div className="font-semibold">{msg.sender}</div>
                         <div>{msg.text}</div>
-                        <div className="text-xs text-gray-500">{new Date(msg.timestamp).toLocaleTimeString()}</div>
+                        <div className="text-xs text-secondaryText">{new Date(msg.timestamp).toLocaleTimeString()}</div>
                       </div>
                     ))
                   )}
@@ -349,7 +349,7 @@ export default function ChatRoom({ preferences, signOut }: Props) {
 
                 <input
                   type="text"
-                  className="mt-4 p-3 rounded-md border border-gray-300 dark:border-gray-700 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="mt-4 p-3 rounded-md border border-secondaryText bg-muted focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Type a message and press Enter"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
@@ -362,7 +362,7 @@ export default function ChatRoom({ preferences, signOut }: Props) {
                 />
               </>
             ) : (
-              <p className="italic text-center text-gray-500 dark:text-gray-400">Waiting for match...</p>
+              <p className="italic text-center text-secondaryText">Waiting for match...</p>
             )}
           </section>
         </main>
