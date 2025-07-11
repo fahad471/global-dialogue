@@ -91,6 +91,7 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<string[]>([]);
   const [peerId, setPeerId] = useState<string | null>(null);
+  const [peerUsername, setPeerUsername] = useState<string | null>(null);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
@@ -189,13 +190,17 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
       const data = JSON.parse(event.data);
       if (data.type === 'matched') {
         setRoomId(data.roomId);
+        setPeerUsername(data.peerUsername);
         setPeerId(data.peerId);
 
         const initiator = userId < data.peerId;
         setupPeerConnection(initiator);
       } else if (data.type === 'chat') {
-        setMessages((prev) => [...prev, data.message]);
-      } else if (data.type === 'signal') {
+  const isString = typeof data.message === 'string';
+  const msg = isString ? JSON.parse(data.message) : data.message;
+  setMessages((prev) => [...prev, JSON.stringify(msg)]);
+}
+      else if (data.type === 'signal') {
         await handleSignal(data.signalType, data.data);
       }
     };
@@ -237,17 +242,25 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
     }
   }, [preferences]);
 
-  const sendMessage = (message: string) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'chat', message }));
-      setMessages((prev) => [...prev, `You: ${message}`]);
-    }
+const sendMessage = (text: string) => {
+  const msg = {
+    sender: userId,
+    text,
+    timestamp: new Date().toISOString(),
   };
+
+  if (wsRef.current?.readyState === WebSocket.OPEN) {
+    wsRef.current.send(JSON.stringify({ type: 'chat', message: msg }));
+    setMessages((prev) => [...prev, JSON.stringify(msg)]);
+  }
+};
+
 
   return {
     connected,
     messages,
     sendMessage,
+    peerUsername,
     peerId,
     roomId,
     localStream,

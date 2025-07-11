@@ -1,12 +1,15 @@
 import WebSocket from 'ws';
-import { supabaseAdmin as supabase } from './supabaseAdmin'; // ✅ uses secure key
+import { supabaseAdmin as supabase } from './supabaseAdmin';
 
 type ClientData = {
   ws: WebSocket;
   userId: string;
+  username?: string;
   preferences: {
     matchType: 'similar' | 'opposite' | 'random' | 'topic';
     topics: string[];
+    language?: string | null;
+    nationality?: string | null;
   };
   ideologicalStance?: string;
   personalityType?: string;
@@ -31,7 +34,7 @@ export function createMatchmaker() {
             return;
           }
 
-          // If user already connected, replace old socket
+          // Handle reconnection
           const existingClient = clients.get(userId);
           if (existingClient) {
             console.log(`User ${userId} reconnected, closing old socket`);
@@ -43,6 +46,7 @@ export function createMatchmaker() {
           const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select(`
+              username,
               ideological_stance,
               personality_type,
               core_beliefs,
@@ -57,10 +61,10 @@ export function createMatchmaker() {
             return;
           }
 
-          // Fetch match preferences separately
+          // Fetch match preferences (including language and nationality)
           const { data: prefData, error: prefError } = await supabase
             .from('user_match_preferences')
-            .select('preferred_match_type')
+            .select('preferred_match_type, language, nationality')
             .eq('id', userId)
             .maybeSingle();
 
@@ -73,9 +77,12 @@ export function createMatchmaker() {
           const clientData: ClientData = {
             ws,
             userId,
+            username: profileData.username,
             preferences: {
               matchType: preferredMatchType,
               topics: profileData.user_selected_topics?.map((t: any) => t.topic) || [],
+              language: prefData?.language ?? null,
+              nationality: prefData?.nationality ?? null,
             },
             ideologicalStance: profileData.ideological_stance,
             personalityType: profileData.personality_type,
@@ -97,13 +104,11 @@ export function createMatchmaker() {
           }
 
         } else if (data.type === 'signal') {
-          // Forward WebRTC signaling data to the peer in the same room
           const senderUserId = getUserIdByWs(ws);
           if (!senderUserId) return;
           const sender = clients.get(senderUserId);
           if (!sender || !sender.roomId) return;
 
-          // Find peer in same room and send signal
           for (const client of clients.values()) {
             if (client.roomId === sender.roomId && client.ws !== ws) {
               sendMessage(client.ws, {
@@ -175,57 +180,115 @@ export function createMatchmaker() {
     }
   }
 
-  function tryMatch() {
-    console.log('Trying to match clients. Queue length:', waitingQueue.size);
-    const queueArray = Array.from(waitingQueue);
+function tryMatch() {
+  console.log('Trying to match clients. Queue length:', waitingQueue.size);
+  const queueArray = Array.from(waitingQueue);
+  const buckets = new Map<string, ClientData[]>();
 
-    for (let i = 0; i < queueArray.length; i++) {
-      const aUserId = queueArray[i];
-      const a = clients.get(aUserId);
+  // Step 1: Organize into buckets
+  for (const userId of queueArray) {
+    const client = clients.get(userId);
+    if (!client || client.inRoom) continue;
+
+    const { matchType, language, nationality } = client.preferences;
+    const bucketKey = `${matchType}|${language ?? ''}|${nationality ?? ''}`;
+
+    if (!buckets.has(bucketKey)) {
+      buckets.set(bucketKey, []);
+    }
+    buckets.get(bucketKey)!.push(client);
+  }
+
+  // Step 2: Try matching within each bucket
+  for (const [, group] of buckets.entries()) {
+    for (let i = 0; i < group.length; i++) {
+      const a = group[i];
       if (!a || a.inRoom) continue;
 
-      for (let j = i + 1; j < queueArray.length; j++) {
-        const bUserId = queueArray[j];
-        const b = clients.get(bUserId);
+      for (let j = i + 1; j < group.length; j++) {
+        const b = group[j];
         if (!b || b.inRoom) continue;
 
         if (canMatch(a, b)) {
-          waitingQueue.delete(aUserId);
-          waitingQueue.delete(bUserId);
+          // Match found
+          waitingQueue.delete(a.userId);
+          waitingQueue.delete(b.userId);
 
           const roomId = `room-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
           a.roomId = b.roomId = roomId;
           a.inRoom = b.inRoom = true;
 
-          sendMessage(a.ws, { type: 'matched', roomId, peerId: b.userId });
-          sendMessage(b.ws, { type: 'matched', roomId, peerId: a.userId });
+          sendMessage(a.ws, {
+            type: 'matched',
+            roomId,
+            peerId: b.userId,
+            peerUsername: b.username,
+          });
 
+          sendMessage(b.ws, {
+            type: 'matched',
+            roomId,
+            peerId: a.userId,
+            peerUsername: a.username,
+          });
+
+          // Break inner loop to re-process updated queue
           return tryMatch();
         }
       }
     }
   }
+}
+
 
   function canMatch(a: ClientData, b: ClientData): boolean {
-    if (a.preferences.matchType !== b.preferences.matchType) return false;
-    const type = a.preferences.matchType;
-
-    switch (type) {
-      case 'random':
-        return true;
-      case 'similar':
-        return (
-          a.ideologicalStance === b.ideologicalStance &&
-          a.personalityType === b.personalityType
-        );
-      case 'opposite':
-        return a.ideologicalStance !== b.ideologicalStance;
-      case 'topic':
-        return a.preferences.topics.some(topic => b.preferences.topics.includes(topic));
-      default:
-        return false;
-    }
+  // Match types must match exactly
+  if (a.preferences.matchType !== b.preferences.matchType) {
+    return false;
   }
+
+  // Build criteria sets for language and nationality
+  const aCriteria = new Set<string>();
+  const bCriteria = new Set<string>();
+
+  if (a.preferences.language) aCriteria.add(`language:${a.preferences.language}`);
+  if (a.preferences.nationality) aCriteria.add(`nationality:${a.preferences.nationality}`);
+
+  if (b.preferences.language) bCriteria.add(`language:${b.preferences.language}`);
+  if (b.preferences.nationality) bCriteria.add(`nationality:${b.preferences.nationality}`);
+
+  // If both users have criteria, sets must match exactly
+  if (aCriteria.size > 0 && bCriteria.size > 0) {
+    if (aCriteria.size !== bCriteria.size) return false;
+    for (const crit of aCriteria) {
+      if (!bCriteria.has(crit)) return false;
+    }
+  } else if (aCriteria.size > 0 || bCriteria.size > 0) {
+    return false;
+  }
+
+  // Matching logic by shared preference type
+  switch (a.preferences.matchType) {
+    case 'random':
+      return true;
+
+    case 'similar':
+      return (
+        a.ideologicalStance === b.ideologicalStance &&
+        a.personalityType === b.personalityType
+      );
+
+    case 'opposite':
+      return a.ideologicalStance !== b.ideologicalStance;
+
+    case 'topic':
+      return a.preferences.topics.some(topic => b.preferences.topics.includes(topic));
+
+    default:
+      return false;
+  }
+}
+
 
   function broadcastToRoom(roomId: string, sender: WebSocket, message: string) {
     for (const client of clients.values()) {

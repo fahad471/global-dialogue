@@ -17,12 +17,22 @@ export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
   if (!auth || !auth.user) {
     return <div className="text-text p-8">Please log in</div>;
   }
-  const { user } = auth;
 
+  const { user } = auth;
   const topics = useTopics();
 
   const [matchType, setMatchType] = useState("");
   const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
+  const [language, setLanguage] = useState("");
+  const [nationality, setNationality] = useState("");
+
+  const languages = [
+    "None","English", "Spanish", "French", "German", "Chinese", "Arabic", "Hindi", "Portuguese", "Russian", "Japanese"
+  ];
+
+  const nationalities = [
+    "American", "Canadian", "British", "French", "German", "Indian", "Chinese", "Brazilian", "Nigerian", "Australian"
+  ];
 
   useEffect(() => {
     const fetchPreferences = async () => {
@@ -30,7 +40,7 @@ export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
 
       const { data: prefData, error: prefError } = await supabase
         .from("user_match_preferences")
-        .select("preferred_match_type")
+        .select("preferred_match_type, language, nationality")
         .eq("id", user.id)
         .single();
 
@@ -38,6 +48,8 @@ export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
         console.error("Error fetching match preferences:", prefError);
       } else if (prefData) {
         setMatchType(prefData.preferred_match_type || "");
+        setLanguage(prefData.language || "");
+        setNationality(prefData.nationality || "");
       }
 
       const { data: selectedTopics, error: selectedTopicsError } = await supabase
@@ -66,7 +78,12 @@ export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
 
     const { error: prefError } = await supabase
       .from("user_match_preferences")
-      .upsert({ id: user.id, preferred_match_type: matchType });
+      .upsert({
+        id: user.id,
+        preferred_match_type: matchType,
+        language,
+        nationality,
+      });
 
     if (prefError) {
       alert("Error saving match preferences: " + prefError.message);
@@ -114,9 +131,10 @@ export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
             <h1 className="text-4xl font-extrabold mb-6 text-center">Match Preferences</h1>
 
             <div className="space-y-6 text-left">
+
               {/* Match Type */}
               <div>
-                <h2 className="text-xl font-semibold mb-2">Match Type</h2>
+                <label className="text-xl font-semibold mb-2 block">Match Type</label>
                 <select
                   className="w-full p-3 border rounded-md bg-background border-secondaryText text-text"
                   value={matchType}
@@ -130,9 +148,45 @@ export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
                 </select>
               </div>
 
+              {/* Language */}
+              <div>
+                <label className="text-xl font-semibold mb-2 block">Language</label>
+                <input
+                  type="text"
+                  list="language-list"
+                  className="w-full p-3 border rounded-md bg-background border-secondaryText text-text"
+                  placeholder="e.g., English"
+                  value={language}
+                  onChange={(e) => setLanguage(e.target.value)}
+                />
+                <datalist id="language-list">
+                  {languages.map((lang) => (
+                    <option key={lang} value={lang} />
+                  ))}
+                </datalist>
+              </div>
+
+              {/* Nationality */}
+              <div>
+                <label className="text-xl font-semibold mb-2 block">Nationality</label>
+                <input
+                  type="text"
+                  list="nationality-list"
+                  className="w-full p-3 border rounded-md bg-background border-secondaryText text-text"
+                  placeholder="e.g., Canadian"
+                  value={nationality}
+                  onChange={(e) => setNationality(e.target.value)}
+                />
+                <datalist id="nationality-list">
+                  {nationalities.map((nat) => (
+                    <option key={nat} value={nat} />
+                  ))}
+                </datalist>
+              </div>
+
               {/* Topics */}
               <div>
-                <h3 className="text-lg font-semibold mb-2">Topics</h3>
+                <label className="text-xl font-semibold mb-2 block">Topics</label>
                 <div className="flex flex-wrap gap-4">
                   {topics.map((topic) => (
                     <label key={topic.id} className="cursor-pointer flex items-center space-x-2">
