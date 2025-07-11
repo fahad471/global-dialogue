@@ -39,7 +39,6 @@ export default function ChatRoom({ preferences, signOut }: Props) {
     connected,
     messages,
     sendMessage,
-    peerId,
     peerUsername,
     roomId,
     localStream,
