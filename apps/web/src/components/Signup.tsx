@@ -5,14 +5,21 @@ import { useNavigate, Link } from "react-router-dom";
 export default function Signup() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [repeatPassword, setRepeatPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
+
+    if (password !== repeatPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setLoading(true);
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -56,6 +63,15 @@ export default function Signup() {
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full p-3 mb-4 rounded-md border border-secondaryText bg-[#3C354D] text-text focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+
+          <input
+            type="password"
+            placeholder="Repeat Password"
+            value={repeatPassword}
+            onChange={(e) => setRepeatPassword(e.target.value)}
             required
             className="w-full p-3 mb-6 rounded-md border border-secondaryText bg-[#3C354D] text-text focus:outline-none focus:ring-2 focus:ring-primary"
           />

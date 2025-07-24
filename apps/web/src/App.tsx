@@ -8,22 +8,23 @@ import ChatRoom from "./components/ChatRoom";
 import MatchPreferences from "./components/MatchPreferences";
 import Dashboard from "./pages/Dashboard";
 import AuthWrapper from "./components/AuthWrapper";
+import Ranking from "./pages/Ranking";  // Make sure this is imported
 import { supabase } from "./lib/supabaseClient";
 import { ThemeProvider } from "./context/themeContext";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [checkingAuth, setCheckingAuth] = useState(true); // <-- Add this
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setIsAuthenticated(!!session);
       if (session) localStorage.setItem("token", session.access_token);
       else localStorage.removeItem("token");
+      setCheckingAuth(false);  // <-- Set to false after checking
     });
 
-    // Subscribe to auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setIsAuthenticated(!!session);
@@ -32,7 +33,6 @@ function App() {
       }
     );
 
-    // Correct cleanup: unsubscribe function directly
     return () => {
       authListener?.subscription?.unsubscribe();
     };
@@ -48,6 +48,10 @@ function App() {
       navigate("/login");
     }
   }, [navigate]);
+
+  if (checkingAuth) {
+    return <div className="p-8 text-center">Loading...</div>;  // <-- Show loading while checking
+  }
 
   return (
     <ThemeProvider>
@@ -94,8 +98,15 @@ function App() {
           path="/chat"
           element={
             <AuthWrapper isAuthenticated={isAuthenticated}>
-              {/* pass signOut here */}
               <ChatRoom signOut={signOut} />
+            </AuthWrapper>
+          }
+        />
+        <Route
+          path="/ranking"
+          element={
+            <AuthWrapper isAuthenticated={isAuthenticated}>
+              <Ranking signOut={signOut} />
             </AuthWrapper>
           }
         />
@@ -103,7 +114,6 @@ function App() {
           path="/matchpreferences"
           element={
             <AuthWrapper isAuthenticated={isAuthenticated}>
-              {/* pass signOut here */}
               <MatchPreferences signOut={signOut} />
             </AuthWrapper>
           }

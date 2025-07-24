@@ -11,7 +11,11 @@ wss.on('connection', (ws) => {
   matchmaker.addClient(ws);
 
   ws.on('message', async (data) => {
+    console.log('Received raw message:', data.toString());
+
     const userId = matchmaker.getUserIdByWs(ws);
+    console.log('UserId for this ws:', userId);
+
     if (!userId) {
       ws.send(JSON.stringify({ error: 'Unauthorized' }));
       return;
@@ -20,16 +24,20 @@ wss.on('connection', (ws) => {
     let parsed;
     try {
       parsed = JSON.parse(data.toString());
-    } catch {
+      console.log('Parsed message:', parsed);
+    } catch (err) {
       ws.send(JSON.stringify({ error: 'Invalid JSON' }));
+      console.log('Invalid JSON:', err);
       return;
     }
 
-    if (parsed.type !== 'chat' || typeof parsed.message !== 'string') {
-      return; // ignore non-chat messages
+    // Fix here: check that parsed.message is an object with text string
+    if (parsed.type !== 'chat' || typeof parsed.message !== 'object' || typeof parsed.message.text !== 'string') {
+      console.log('Ignoring non-chat or invalid message:', parsed);
+      return;
     }
 
-    const text = parsed.message.trim();
+    const text = parsed.message.text.trim();
     if (!text) {
       ws.send(JSON.stringify({ error: 'Empty message' }));
       return;

@@ -5,6 +5,7 @@ import { useTopics } from "../hooks/useTopics";
 import Sidebar from "../components/Sidebar";
 import TopNav from "../components/TopNav";
 import { useTheme } from "../context/themeContext";
+import { useNavigate } from "react-router-dom";
 
 interface MatchPreferencesProps {
   signOut: () => Promise<void>;
@@ -13,64 +14,71 @@ interface MatchPreferencesProps {
 export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
   const auth = useAuth();
   const { theme, toggleTheme } = useTheme();
-
-  if (!auth || !auth.user) {
-    return <div className="text-text p-8">Please log in</div>;
-  }
-
-  const { user } = auth;
   const topics = useTopics();
+  const navigate = useNavigate();
 
-  const [matchType, setMatchType] = useState("");
-  const [selectedTopicIds, setSelectedTopicIds] = useState<string[]>([]);
+  const [matchType, setMatchType] = useState<"random" | "opposite" | "similar" | "topic">("random");
+  const [selectedTopicsWithStance, setSelectedTopicsWithStance] = useState<{ id: string; stance: "for" | "against" }[]>([]);
   const [language, setLanguage] = useState("");
   const [nationality, setNationality] = useState("");
 
+  const { user } = auth || {};
+
   const languages = [
-    "None","English", "Spanish", "French", "German", "Chinese", "Arabic", "Hindi", "Portuguese", "Russian", "Japanese"
+    "None", "English", "Spanish", "French", "German", "Chinese", "Arabic", "Hindi", "Portuguese", "Russian", "Japanese",
+    "Korean", "Turkish", "Italian", "Dutch", "Greek", "Polish", "Hebrew", "Swedish", "Norwegian"
   ];
 
   const nationalities = [
-    "American", "Canadian", "British", "French", "German", "Indian", "Chinese", "Brazilian", "Nigerian", "Australian"
+    "American", "Canadian", "British", "French", "German", "Indian", "Chinese", "Brazilian", "Nigerian", "Australian",
+    "Mexican", "Japanese", "Russian", "Egyptian", "South African", "Italian", "Turkish", "Korean", "Spanish"
   ];
 
   useEffect(() => {
     const fetchPreferences = async () => {
       if (!user) return;
 
-      const { data: prefData, error: prefError } = await supabase
+      const { data: prefData } = await supabase
         .from("user_match_preferences")
         .select("preferred_match_type, language, nationality")
         .eq("id", user.id)
         .single();
 
-      if (prefError) {
-        console.error("Error fetching match preferences:", prefError);
-      } else if (prefData) {
-        setMatchType(prefData.preferred_match_type || "");
+      if (prefData) {
+        setMatchType(prefData.preferred_match_type || "random");
         setLanguage(prefData.language || "");
         setNationality(prefData.nationality || "");
       }
 
-      const { data: selectedTopics, error: selectedTopicsError } = await supabase
+      const { data: selectedTopics } = await supabase
         .from("user_selected_topics")
-        .select("topic_id")
+        .select("topic_id, stance")
         .eq("user_id", user.id);
 
-      if (selectedTopicsError) {
-        console.error("Error fetching selected topics:", selectedTopicsError);
-      } else if (selectedTopics) {
-        setSelectedTopicIds(selectedTopics.map((t) => t.topic_id));
+      if (selectedTopics) {
+        setSelectedTopicsWithStance(
+          selectedTopics.map((t) => ({
+            id: t.topic_id,
+            stance: t.stance === "against" ? "against" : "for",
+          }))
+        );
       }
     };
 
     fetchPreferences();
   }, [user]);
 
-  const toggleTopic = (id: string) => {
-    setSelectedTopicIds((prev) =>
-      prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]
-    );
+  const toggleTopic = (id: string, stance: "for" | "against") => {
+    setSelectedTopicsWithStance((prev) => {
+      const existing = prev.find((t) => t.id === id);
+      if (!existing) {
+        return [...prev, { id, stance }];
+      }
+      if (existing.stance === stance) {
+        return prev.filter((t) => t.id !== id);
+      }
+      return prev.map((t) => (t.id === id ? { ...t, stance } : t));
+    });
   };
 
   const handleSave = async () => {
@@ -90,127 +98,155 @@ export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
       return;
     }
 
-    const { error: deleteError } = await supabase
+    await supabase
       .from("user_selected_topics")
       .delete()
       .eq("user_id", user.id);
 
-    if (deleteError) {
-      alert("Error clearing selected topics: " + deleteError.message);
-      return;
-    }
-
-    if (selectedTopicIds.length > 0) {
-      const inserts = selectedTopicIds.map((topic_id) => ({
+    if (selectedTopicsWithStance.length > 0) {
+      const inserts = selectedTopicsWithStance.map(({ id, stance }) => ({
         user_id: user.id,
-        topic_id,
+        topic_id: id,
+        stance,
       }));
-
-      const { error: insertError } = await supabase
-        .from("user_selected_topics")
-        .insert(inserts);
-
-      if (insertError) {
-        alert("Error saving selected topics: " + insertError.message);
-        return;
-      }
+      await supabase.from("user_selected_topics").insert(inserts);
     }
 
     alert("Preferences saved.");
   };
 
+  if (!auth || !auth.user) {
+    return <div className="text-text p-8">Please log in</div>;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-background text-text transition-colors duration-300">
       <TopNav theme={theme} toggleTheme={toggleTheme} signOut={signOut} />
-
       <div className="flex flex-1 overflow-hidden">
         <Sidebar />
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8 md:p-12">
+          <div className="max-w-5xl mx-auto bg-surface rounded-3xl shadow-xl px-6 sm:px-10 py-10 space-y-10">
+            <h1 className="text-4xl font-bold text-center">Match Preferences</h1>
 
-        <main className="flex-1 p-12 overflow-y-auto">
-          <section className="max-w-5xl mx-auto bg-surface rounded-3xl shadow-2xl p-12 transition-colors duration-300">
-            <h1 className="text-4xl font-extrabold mb-6 text-center">Match Preferences</h1>
-
-            <div className="space-y-6 text-left">
-
-              {/* Match Type */}
-              <div>
-                <label className="text-xl font-semibold mb-2 block">Match Type</label>
-                <select
-                  className="w-full p-3 border rounded-md bg-background border-secondaryText text-text"
-                  value={matchType}
-                  onChange={(e) => setMatchType(e.target.value)}
-                >
-                  <option value="">Select preference</option>
-                  <option value="similar">Similar Views</option>
-                  <option value="opposite">Opposing Views</option>
-                  <option value="random">Random Match</option>
-                  <option value="topic">Topic-based</option>
-                </select>
+            {/* Match Type */}
+            <section>
+              <h2 className="text-xl font-semibold mb-3">Match Type</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {["random", "opposite", "similar", "topic"].map((type) => (
+                  <button
+                    key={type}
+                    className={`px-4 py-2 rounded-md text-sm font-medium border transition-all ${
+                      matchType === type
+                        ? "bg-primary text-white border-primary"
+                        : "bg-muted text-text border-secondaryText hover:border-primary"
+                    }`}
+                    onClick={() => setMatchType(type as any)}
+                  >
+                    {type === "random"
+                      ? "Random"
+                      : type === "opposite"
+                      ? "Opposite"
+                      : type === "similar"
+                      ? "Similar"
+                      : "Topic-Based"}
+                  </button>
+                ))}
               </div>
+            </section>
 
-              {/* Language */}
-              <div>
-                <label className="text-xl font-semibold mb-2 block">Language</label>
-                <input
-                  type="text"
-                  list="language-list"
-                  className="w-full p-3 border rounded-md bg-background border-secondaryText text-text"
-                  placeholder="e.g., English"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                />
-                <datalist id="language-list">
-                  {languages.map((lang) => (
-                    <option key={lang} value={lang} />
-                  ))}
-                </datalist>
-              </div>
+            {/* Language */}
+            <section>
+              <label className="block mb-2 font-medium">Preferred Language</label>
+              <input
+                type="text"
+                list="language-list"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                placeholder="Choose your language"
+                className="w-full p-3 border rounded-md bg-background text-text border-secondaryText"
+              />
+              <datalist id="language-list">
+                {languages.map((lang) => (
+                  <option key={lang} value={lang} />
+                ))}
+              </datalist>
+            </section>
 
-              {/* Nationality */}
-              <div>
-                <label className="text-xl font-semibold mb-2 block">Nationality</label>
-                <input
-                  type="text"
-                  list="nationality-list"
-                  className="w-full p-3 border rounded-md bg-background border-secondaryText text-text"
-                  placeholder="e.g., Canadian"
-                  value={nationality}
-                  onChange={(e) => setNationality(e.target.value)}
-                />
-                <datalist id="nationality-list">
-                  {nationalities.map((nat) => (
-                    <option key={nat} value={nat} />
-                  ))}
-                </datalist>
-              </div>
+            {/* Nationality */}
+            <section>
+              <label className="block mb-2 font-medium">Preferred Nationality</label>
+              <input
+                type="text"
+                list="nationality-list"
+                value={nationality}
+                onChange={(e) => setNationality(e.target.value)}
+                placeholder="Choose your nationality"
+                className="w-full p-3 border rounded-md bg-background text-text border-secondaryText"
+              />
+              <datalist id="nationality-list">
+                {nationalities.map((nat) => (
+                  <option key={nat} value={nat} />
+                ))}
+              </datalist>
+            </section>
 
-              {/* Topics */}
-              <div>
-                <label className="text-xl font-semibold mb-2 block">Topics</label>
-                <div className="flex flex-wrap gap-4">
-                  {topics.map((topic) => (
-                    <label key={topic.id} className="cursor-pointer flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={selectedTopicIds.includes(topic.id)}
-                        onChange={() => toggleTopic(topic.id)}
-                        className="rounded border-secondaryText bg-background text-accent"
-                      />
-                      <span>{topic.name}</span>
-                    </label>
-                  ))}
+            {/* Topic Selection */}
+            {matchType === "topic" && (
+              <section className="pt-4">
+                <h2 className="text-xl font-semibold mb-4">Select Topics</h2>
+                <div className="border border-secondaryText rounded-lg bg-muted p-4 max-h-[400px] overflow-y-auto">
+                  {topics.length === 0 ? (
+                    <p className="text-sm italic text-tertiaryText">No topics available</p>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {topics.map((topic) => {
+                        const selected = selectedTopicsWithStance.find((t) => t.id === topic.id);
+                        return (
+                          <div key={topic.id} className="flex flex-col bg-background p-3 rounded-lg shadow-sm border border-secondaryText">
+                            <span className="text-sm font-medium mb-2">{topic.name}</span>
+                            <div className="flex gap-2">
+                              {["for", "against"].map((stance) => (
+                                <button
+                                  key={stance}
+                                  onClick={() => toggleTopic(topic.id, stance as "for" | "against")}
+                                  className={`px-3 py-1 text-xs rounded-full border font-medium transition ${
+                                    selected?.stance === stance
+                                      ? stance === "for"
+                                        ? "bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700"
+                                        : "bg-rose-600 text-white border-rose-700 hover:bg-rose-700"
+                                      : "bg-muted text-text border-secondaryText hover:border-accent"
+                                  }`}
+                                >
+                                  {stance}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
+              </section>
+            )}
 
-              {/* Save Button */}
+            {/* Save + Find Buttons */}
+            <div className="pt-4 flex justify-center gap-4">
               <button
-                className="mt-4 px-6 py-3 bg-primary hover:bg-accent text-text font-semibold rounded-lg transition"
                 onClick={handleSave}
+                className="px-6 py-3 bg-primary hover:bg-accent text-white rounded-md font-semibold transition"
               >
                 Save Preferences
               </button>
+
+              <button
+                onClick={() => navigate("/chat")}
+                className="px-6 py-3 bg-surface border border-primary text-primary hover:bg-primary hover:text-white rounded-md font-semibold transition"
+              >
+                Find Partner
+              </button>
             </div>
-          </section>
+          </div>
         </main>
       </div>
     </div>

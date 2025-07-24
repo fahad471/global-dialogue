@@ -1,13 +1,18 @@
 import WebSocket from 'ws';
 import { supabaseAdmin as supabase } from './supabaseAdmin';
 
+type TopicWithStance = {
+  topic: string;
+  stance: 'for' | 'against';
+};
+
 type ClientData = {
   ws: WebSocket;
   userId: string;
   username?: string;
   preferences: {
     matchType: 'similar' | 'opposite' | 'random' | 'topic';
-    topics: string[];
+    topics: TopicWithStance[];
     language?: string | null;
     nationality?: string | null;
   };
@@ -50,7 +55,10 @@ export function createMatchmaker() {
               ideological_stance,
               personality_type,
               core_beliefs,
-              user_selected_topics ( topic:topic_id )
+              user_selected_topics (
+                topic:topic_id,
+                stance
+              )
             `)
             .eq('id', userId)
             .single();
@@ -61,7 +69,7 @@ export function createMatchmaker() {
             return;
           }
 
-          // Fetch match preferences (including language and nationality)
+          // Fetch match preferences
           const { data: prefData, error: prefError } = await supabase
             .from('user_match_preferences')
             .select('preferred_match_type, language, nationality')
@@ -80,7 +88,10 @@ export function createMatchmaker() {
             username: profileData.username,
             preferences: {
               matchType: preferredMatchType,
-              topics: profileData.user_selected_topics?.map((t: any) => t.topic) || [],
+              topics: profileData.user_selected_topics?.map((t: any) => ({
+                topic: t.topic,
+                stance: t.stance,
+              })) || [],
               language: prefData?.language ?? null,
               nationality: prefData?.nationality ?? null,
             },
@@ -180,115 +191,113 @@ export function createMatchmaker() {
     }
   }
 
-function tryMatch() {
-  console.log('Trying to match clients. Queue length:', waitingQueue.size);
-  const queueArray = Array.from(waitingQueue);
-  const buckets = new Map<string, ClientData[]>();
+  function tryMatch() {
+    console.log('Trying to match clients. Queue length:', waitingQueue.size);
+    const queueArray = Array.from(waitingQueue);
+    const buckets = new Map<string, ClientData[]>();
 
-  // Step 1: Organize into buckets
-  for (const userId of queueArray) {
-    const client = clients.get(userId);
-    if (!client || client.inRoom) continue;
+    for (const userId of queueArray) {
+      const client = clients.get(userId);
+      if (!client || client.inRoom) continue;
 
-    const { matchType, language, nationality } = client.preferences;
-    const bucketKey = `${matchType}|${language ?? ''}|${nationality ?? ''}`;
+      const { matchType, language, nationality } = client.preferences;
+      const bucketKey = `${matchType}|${language ?? ''}|${nationality ?? ''}`;
 
-    if (!buckets.has(bucketKey)) {
-      buckets.set(bucketKey, []);
+      if (!buckets.has(bucketKey)) {
+        buckets.set(bucketKey, []);
+      }
+      buckets.get(bucketKey)!.push(client);
     }
-    buckets.get(bucketKey)!.push(client);
-  }
 
-  // Step 2: Try matching within each bucket
-  for (const [, group] of buckets.entries()) {
-    for (let i = 0; i < group.length; i++) {
-      const a = group[i];
-      if (!a || a.inRoom) continue;
+    for (const [, group] of buckets.entries()) {
+      for (let i = 0; i < group.length; i++) {
+        const a = group[i];
+        if (!a || a.inRoom) continue;
 
-      for (let j = i + 1; j < group.length; j++) {
-        const b = group[j];
-        if (!b || b.inRoom) continue;
+        for (let j = i + 1; j < group.length; j++) {
+          const b = group[j];
+          if (!b || b.inRoom) continue;
 
-        if (canMatch(a, b)) {
-          // Match found
-          waitingQueue.delete(a.userId);
-          waitingQueue.delete(b.userId);
+          if (canMatch(a, b)) {
+            // Match found
+            waitingQueue.delete(a.userId);
+            waitingQueue.delete(b.userId);
 
-          const roomId = `room-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-          a.roomId = b.roomId = roomId;
-          a.inRoom = b.inRoom = true;
+            const roomId = `room-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+            a.roomId = b.roomId = roomId;
+            a.inRoom = b.inRoom = true;
 
-          sendMessage(a.ws, {
-            type: 'matched',
-            roomId,
-            peerId: b.userId,
-            peerUsername: b.username,
-          });
+            sendMessage(a.ws, {
+              type: 'matched',
+              roomId,
+              peerId: b.userId,
+              peerUsername: b.username,
+            });
 
-          sendMessage(b.ws, {
-            type: 'matched',
-            roomId,
-            peerId: a.userId,
-            peerUsername: a.username,
-          });
+            sendMessage(b.ws, {
+              type: 'matched',
+              roomId,
+              peerId: a.userId,
+              peerUsername: a.username,
+            });
 
-          // Break inner loop to re-process updated queue
-          return tryMatch();
+            return tryMatch();
+          }
         }
       }
     }
   }
-}
-
 
   function canMatch(a: ClientData, b: ClientData): boolean {
-  // Match types must match exactly
-  if (a.preferences.matchType !== b.preferences.matchType) {
-    return false;
-  }
+    if (a.preferences.matchType !== b.preferences.matchType) return false;
 
-  // Build criteria sets for language and nationality
-  const aCriteria = new Set<string>();
-  const bCriteria = new Set<string>();
+    const aCriteria = new Set<string>();
+    const bCriteria = new Set<string>();
 
-  if (a.preferences.language) aCriteria.add(`language:${a.preferences.language}`);
-  if (a.preferences.nationality) aCriteria.add(`nationality:${a.preferences.nationality}`);
+    if (a.preferences.language) aCriteria.add(`language:${a.preferences.language}`);
+    if (a.preferences.nationality) aCriteria.add(`nationality:${a.preferences.nationality}`);
+    if (b.preferences.language) bCriteria.add(`language:${b.preferences.language}`);
+    if (b.preferences.nationality) bCriteria.add(`nationality:${b.preferences.nationality}`);
 
-  if (b.preferences.language) bCriteria.add(`language:${b.preferences.language}`);
-  if (b.preferences.nationality) bCriteria.add(`nationality:${b.preferences.nationality}`);
-
-  // If both users have criteria, sets must match exactly
-  if (aCriteria.size > 0 && bCriteria.size > 0) {
-    if (aCriteria.size !== bCriteria.size) return false;
-    for (const crit of aCriteria) {
-      if (!bCriteria.has(crit)) return false;
-    }
-  } else if (aCriteria.size > 0 || bCriteria.size > 0) {
-    return false;
-  }
-
-  // Matching logic by shared preference type
-  switch (a.preferences.matchType) {
-    case 'random':
-      return true;
-
-    case 'similar':
-      return (
-        a.ideologicalStance === b.ideologicalStance &&
-        a.personalityType === b.personalityType
-      );
-
-    case 'opposite':
-      return a.ideologicalStance !== b.ideologicalStance;
-
-    case 'topic':
-      return a.preferences.topics.some(topic => b.preferences.topics.includes(topic));
-
-    default:
+    if (aCriteria.size > 0 && bCriteria.size > 0) {
+      if (aCriteria.size !== bCriteria.size) return false;
+      for (const crit of aCriteria) {
+        if (!bCriteria.has(crit)) return false;
+      }
+    } else if (aCriteria.size > 0 || bCriteria.size > 0) {
       return false;
-  }
-}
+    }
 
+    switch (a.preferences.matchType) {
+      case 'random':
+        return true;
+
+      case 'similar':
+        return (
+          a.ideologicalStance === b.ideologicalStance &&
+          a.personalityType === b.personalityType
+        );
+
+      case 'opposite':
+        return a.ideologicalStance !== b.ideologicalStance;
+
+      case 'topic':
+        for (const aTopic of a.preferences.topics) {
+          for (const bTopic of b.preferences.topics) {
+            if (
+              aTopic.topic === bTopic.topic &&
+              aTopic.stance !== bTopic.stance
+            ) {
+              return true;
+            }
+          }
+        }
+        return false;
+
+      default:
+        return false;
+    }
+  }
 
   function broadcastToRoom(roomId: string, sender: WebSocket, message: string) {
     for (const client of clients.values()) {
