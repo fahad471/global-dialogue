@@ -120,4 +120,4 @@ Backend architecture (with code)
 
 Database schema for user profiles, beliefs, rankings, etc.
 
-Just let me know where you want to begin. i want to make this start making the mvp for thiswith best modern stable and extendable solution i dont want workarounds and cheap solutions do it in detail bro i want make this how do i do it please i want a modern stable and extendable solution  waht is the user potential for this i am king
+Just let me know where you want to begin. i want to make this start making the mvp for thiswith best modern stable and extendable solution i dont want workarounds and cheap solutions do it in detail bro i want make this how do i do it please i want a modern stable and extendable solution  waht is the user potential for this i am king and emperor
