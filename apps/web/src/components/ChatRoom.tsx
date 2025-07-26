@@ -7,6 +7,8 @@ import TopNav from "./TopNav";
 import VideoTile from "./VideoTile";
 import ControlsBar from "./ControlsBar";
 import { supabase } from '../lib/supabaseClient';  // your existing client
+import { useNavigate } from 'react-router-dom';
+
 
 const wsUrl = import.meta.env.VITE_WS_URL;
 
@@ -43,6 +45,8 @@ export default function ChatRoom({ preferences, signOut }: Props) {
   const [focused, setFocused] = useState<"local" | "remote" | null>(null);
   const videoContainerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const navigate = useNavigate();
+
 
   // New state for topics fetched from Supabase
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -51,11 +55,13 @@ export default function ChatRoom({ preferences, signOut }: Props) {
     connected,
     messages,
     sendMessage,
+    sendCallEnded,
     peerUsername,
     roomId,
     localStream,
     remoteStream,
-    peerConnection
+    peerConnection,
+    onCallEnded, // ✅ Include this
   } = useWebSocket(wsUrl, auth?.user?.id || '', preferences || {});
 
   // For showing rating form
@@ -63,6 +69,18 @@ export default function ChatRoom({ preferences, signOut }: Props) {
 
   // Track call start time for duration
   const callStartTime = useRef(Date.now());
+  useEffect(() => {
+    if (onCallEnded) {
+      console.log("✅ Registering onCallEnded callback");
+
+      onCallEnded(() => {
+        console.log("✅ onCallEnded callback triggered in ChatRoom");
+        endCall();
+        setShowRatingForm(true);
+      });
+    }
+  }, [onCallEnded]);
+
 
   // Fetch topics from Supabase on mount
   useEffect(() => {
@@ -88,19 +106,38 @@ export default function ChatRoom({ preferences, signOut }: Props) {
 
   useEffect(() => {
     try {
-      const formatted = messages.map((msgStr: string) => {
-        const msg = JSON.parse(msgStr);
-        return {
-          sender: msg.sender || peerUsername || "Peer",
-          text: msg.text || "",
-          timestamp: msg.timestamp || new Date().toISOString(),
-          fact_check: msg.fact_check,
-          toxicity: msg.toxicity,
-          hate_speech: msg.hate_speech,
-          rating: msg.rating,
-          reasoning: msg.reasoning,
-        };
-      });
+const formatted: Message[] = [];
+
+messages.forEach((msgStr: string) => {
+  try {
+    const msg = JSON.parse(msgStr);
+
+    if (msg.type === 'call_ended') {
+      setShowRatingForm(true);
+      return;
+    }
+
+    formatted.push({
+      sender: msg.sender || peerUsername || "Peer",
+      text: msg.text || "",
+      timestamp: msg.timestamp || new Date().toISOString(),
+      fact_check: msg.fact_check,
+      toxicity: msg.toxicity,
+      hate_speech: msg.hate_speech,
+      rating: msg.rating,
+      reasoning: msg.reasoning,
+    });
+  } catch {
+    formatted.push({
+      sender: peerUsername || "Peer",
+      text: msgStr,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+
+
       setChatMessages(formatted);
     } catch {
       const formatted = messages.map((msg: string) => ({
@@ -143,8 +180,13 @@ export default function ChatRoom({ preferences, signOut }: Props) {
   const endCall = () => {
     localStream?.getTracks().forEach(track => track.stop());
     remoteStream?.getTracks().forEach(track => track.stop());
+
+    // Notify peer
+    sendMessage(JSON.stringify({ type: 'call_ended' }));
+
     setShowRatingForm(true);
   };
+
 
   const toggleFullscreen = () => {
     if (!isFullscreen) {
@@ -195,8 +237,8 @@ export default function ChatRoom({ preferences, signOut }: Props) {
       }
 
       alert("Thanks for your feedback!");
-      setShowRatingForm(false);
-      window.location.reload();
+      
+      navigate('/dashboard');
     } catch (err) {
       console.error(err);
       alert("Unexpected error submitting rating");
@@ -285,7 +327,11 @@ export default function ChatRoom({ preferences, signOut }: Props) {
                   videoOn={videoOn}
                   onToggleMic={toggleMic}
                   onToggleVideo={toggleVideo}
-                  onEndCall={endCall}
+                  onEndCall={() => {
+  sendCallEnded();  // Notify peer
+  endCall();
+}}
+
                   onShareScreen={shareScreen}
                 />
 
@@ -343,7 +389,7 @@ export default function ChatRoom({ preferences, signOut }: Props) {
             >
               <h2 className="text-2xl font-bold mb-4">Rate Your Call</h2>
 
-              <input type="hidden" name="conversation_id" value={roomId} />
+              <input type="hidden" name="conversation_id" value={roomId ?? ""} />
 
               {["knowledge", "respectfulness", "engagement", "clarity", "overall"].map((field) => (
                 <label key={field} className="block">

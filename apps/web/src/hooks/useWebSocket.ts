@@ -1,93 +1,23 @@
-// import { useEffect, useRef, useState } from 'react';
-
-// export function useWebSocket(url: string, userId: string, preferences: any) {
-//   const wsRef = useRef<WebSocket | null>(null);
-//   const [connected, setConnected] = useState(false);
-//   const [messages, setMessages] = useState<string[]>([]);
-//   const [peerId, setPeerId] = useState<string | null>(null);
-//   const [roomId, setRoomId] = useState<string | null>(null);
-
-//   // Effect to establish WebSocket connection — depends only on userId and url
-//   useEffect(() => {
-//     if (!userId) return;
-
-//     const ws = new WebSocket(url);
-//     wsRef.current = ws;
-
-//     ws.onopen = () => {
-//       setConnected(true);
-//       // Send initial user info and preferences once connection opens
-//       ws.send(
-//         JSON.stringify({
-//           type: 'init',
-//           userId,
-//           preferences,
-//         })
-//       );
-//     };
-
-//     ws.onmessage = (event) => {
-//       const data = JSON.parse(event.data);
-//       if (data.type === 'matched') {
-//         setRoomId(data.roomId);
-//         setPeerId(data.peerId);
-//       } else if (data.type === 'chat') {
-//         setMessages((prev) => [...prev, data.message]);
-//       }
-//     };
-
-//     ws.onclose = () => {
-//       setConnected(false);
-//       setPeerId(null);
-//       setRoomId(null);
-//     };
-
-//     // Cleanup on unmount or userId/url change
-//     return () => {
-//       ws.close();
-//     };
-//   }, [userId, url]);
-
-//   // Effect to send preferences updates when preferences change, but connection is open
-//   useEffect(() => {
-//     if (wsRef.current?.readyState === WebSocket.OPEN) {
-//       wsRef.current.send(
-//         JSON.stringify({
-//           type: 'updatePreferences',
-//           preferences,
-//         })
-//       );
-//     }
-//   }, [preferences]);
-
-//   // Function to send chat messages over the WebSocket
-//   const sendMessage = (message: string) => {
-//     if (wsRef.current?.readyState === WebSocket.OPEN) {
-//       wsRef.current.send(JSON.stringify({ type: 'chat', message }));
-//       setMessages((prev) => [...prev, `You: ${message}`]);
-//     }
-//   };
-
-//   return {
-//     connected,
-//     messages,
-//     sendMessage,
-//     peerId,
-//     roomId,
-//   };
-// }
 import { useEffect, useRef, useState } from 'react';
 
 const ICE_SERVERS = [
   { urls: 'stun:stun.l.google.com:19302' },
-  // You can add TURN servers here for production
+  // Add TURN for production if needed
 ];
+
+type ChatMessage = {
+  sender: string;
+  text: string;
+  timestamp: string;
+  [key: string]: any;
+};
 
 export function useWebSocket(url: string, userId: string, preferences: any) {
   const wsRef = useRef<WebSocket | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
   const remoteStreamRef = useRef<MediaStream | null>(null);
+
   const [connected, setConnected] = useState(false);
   const [messages, setMessages] = useState<string[]>([]);
   const [peerId, setPeerId] = useState<string | null>(null);
@@ -96,10 +26,31 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
 
+  const onCallEndedRef = useRef<() => void>(() => {});
+
   const sendSignal = (signalType: string, data: any) => {
+    wsRef.current?.send(JSON.stringify({ type: 'signal', signalType, data }));
+  };
+
+  const sendRaw = (payload: object) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify({ type: 'signal', signalType, data }));
+      wsRef.current.send(JSON.stringify(payload));
     }
+  };
+
+  const sendMessage = (text: string) => {
+    const msg: ChatMessage = {
+      sender: userId,
+      text,
+      timestamp: new Date().toISOString(),
+    };
+
+    sendRaw({ type: 'chat', message: msg });
+    setMessages((prev) => [...prev, JSON.stringify(msg)]);
+  };
+
+  const sendCallEnded = () => {
+    sendRaw({ type: 'call_ended' });
   };
 
   const setupPeerConnection = (isInitiator: boolean) => {
@@ -107,7 +58,9 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
     pcRef.current = pc;
 
     if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => pc.addTrack(track, localStreamRef.current!));
+      localStreamRef.current.getTracks().forEach((track) => {
+        pc.addTrack(track, localStreamRef.current!);
+      });
     }
 
     const remoteStream = new MediaStream();
@@ -115,7 +68,7 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
     setRemoteStream(remoteStream);
 
     pc.ontrack = (event) => {
-      event.streams[0].getTracks().forEach(track => remoteStream.addTrack(track));
+      event.streams[0].getTracks().forEach((track) => remoteStream.addTrack(track));
     };
 
     pc.onicecandidate = (event) => {
@@ -126,7 +79,7 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
 
     if (isInitiator) {
       pc.createOffer()
-        .then(offer => pc.setLocalDescription(offer))
+        .then((offer) => pc.setLocalDescription(offer))
         .then(() => {
           sendSignal('offer', pc.localDescription);
         })
@@ -177,53 +130,90 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
         console.error('Error accessing media devices.', err);
       }
 
-      ws.send(
-        JSON.stringify({
-          type: 'init',
-          userId,
-          preferences,
-        })
-      );
+      ws.send(JSON.stringify({
+        type: 'init',
+        userId,
+        preferences,
+      }));
     };
 
     ws.onmessage = async (event) => {
-      const data = JSON.parse(event.data);
-      if (data.type === 'matched') {
-        setRoomId(data.roomId);
-        setPeerUsername(data.peerUsername);
-        setPeerId(data.peerId);
+      console.log("🌐 WebSocket message received:", event.data);
 
-        const initiator = userId < data.peerId;
-        setupPeerConnection(initiator);
-      } else if (data.type === 'chat') {
-  const isString = typeof data.message === 'string';
-  const msg = isString ? JSON.parse(data.message) : data.message;
-  setMessages((prev) => [...prev, JSON.stringify(msg)]);
-}
-      else if (data.type === 'signal') {
-        await handleSignal(data.signalType, data.data);
+      let data;
+      try {
+        data = JSON.parse(event.data);
+      } catch (e) {
+        console.warn("❌ Invalid JSON from WS:", event.data);
+        return;
+      }
+
+      // If no top-level type but `text` is stringified JSON with type inside, parse it
+      if (!data?.type && typeof data.text === 'string') {
+        try {
+          const inner = JSON.parse(data.text);
+          if (inner?.type) {
+            data = inner;
+          }
+        } catch {
+          // ignore parse errors, keep data as is
+        }
+      }
+
+      if (!data?.type) {
+        console.warn("⚠️ Message missing 'type':", data);
+        return;
+      }
+
+      switch (data.type) {
+        case 'matched':
+          setRoomId(data.roomId);
+          setPeerId(data.peerId);
+          setPeerUsername(data.peerUsername);
+          setupPeerConnection(userId < data.peerId);
+          break;
+
+        case 'chat':
+          const msg = typeof data.message === 'string' ? JSON.parse(data.message) : data.message;
+          setMessages((prev) => [...prev, JSON.stringify(msg)]);
+          break;
+
+        case 'signal':
+          await handleSignal(data.signalType, data.data);
+          break;
+
+        case 'call_ended':
+          console.log("📡 call_ended message received from peer");
+          if (onCallEndedRef.current) {
+            console.log("✅ Triggering onCallEndedRef callback");
+            onCallEndedRef.current();
+          } else {
+            console.warn("⚠️ onCallEndedRef not set yet");
+          }
+          break;
+
+        default:
+          console.warn("❓ Unknown message type:", data.type);
+          break;
       }
     };
+
 
     ws.onclose = () => {
       setConnected(false);
       setPeerId(null);
       setRoomId(null);
 
-      if (pcRef.current) {
-        pcRef.current.close();
-        pcRef.current = null;
-      }
-      if (localStreamRef.current) {
-        localStreamRef.current.getTracks().forEach(t => t.stop());
-        localStreamRef.current = null;
-        setLocalStream(null);
-      }
-      if (remoteStreamRef.current) {
-        remoteStreamRef.current.getTracks().forEach(t => t.stop());
-        remoteStreamRef.current = null;
-        setRemoteStream(null);
-      }
+      pcRef.current?.close();
+      pcRef.current = null;
+
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+      remoteStreamRef.current?.getTracks().forEach((t) => t.stop());
+
+      localStreamRef.current = null;
+      remoteStreamRef.current = null;
+      setLocalStream(null);
+      setRemoteStream(null);
     };
 
     return () => {
@@ -233,38 +223,26 @@ export function useWebSocket(url: string, userId: string, preferences: any) {
 
   useEffect(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(
-        JSON.stringify({
-          type: 'updatePreferences',
-          preferences,
-        })
-      );
+      wsRef.current.send(JSON.stringify({
+        type: 'updatePreferences',
+        preferences,
+      }));
     }
   }, [preferences]);
-
-const sendMessage = (text: string) => {
-  const msg = {
-    sender: userId,
-    text,
-    timestamp: new Date().toISOString(),
-  };
-
-  if (wsRef.current?.readyState === WebSocket.OPEN) {
-    wsRef.current.send(JSON.stringify({ type: 'chat', message: msg }));
-    setMessages((prev) => [...prev, JSON.stringify(msg)]);
-  }
-};
-
 
   return {
     connected,
     messages,
     sendMessage,
+    sendCallEnded,
     peerUsername,
     peerId,
     roomId,
     localStream,
     remoteStream,
-    peerConnection: pcRef.current, // Optional, if you want to expose it
+    peerConnection: pcRef.current,
+    onCallEnded: (callback: () => void) => {
+      onCallEndedRef.current = callback;
+    },
   };
 }

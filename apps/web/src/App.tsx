@@ -4,17 +4,18 @@ import "./index.css";
 import Signup from "./components/Signup";
 import Login from "./components/Login";
 import ProfileForm from "./components/ProfileForm";
+import ProfileView from "./components/ProfileView";
 import ChatRoom from "./components/ChatRoom";
 import MatchPreferences from "./components/MatchPreferences";
 import Dashboard from "./pages/Dashboard";
 import AuthWrapper from "./components/AuthWrapper";
-import Ranking from "./pages/Ranking";  // Make sure this is imported
 import { supabase } from "./lib/supabaseClient";
 import { ThemeProvider } from "./context/themeContext";
+import HomePage from "./pages/Home";
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [checkingAuth, setCheckingAuth] = useState(true); // <-- Add this
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -22,7 +23,7 @@ function App() {
       setIsAuthenticated(!!session);
       if (session) localStorage.setItem("token", session.access_token);
       else localStorage.removeItem("token");
-      setCheckingAuth(false);  // <-- Set to false after checking
+      setCheckingAuth(false);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -50,7 +51,7 @@ function App() {
   }, [navigate]);
 
   if (checkingAuth) {
-    return <div className="p-8 text-center">Loading...</div>;  // <-- Show loading while checking
+    return <div className="p-8 text-center">Loading...</div>;
   }
 
   return (
@@ -58,13 +59,7 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={
-            isAuthenticated ? (
-              <Navigate to="/dashboard" replace />
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
+          element={<HomePage />}
         />
         <Route
           path="/login"
@@ -90,7 +85,7 @@ function App() {
           path="/profile"
           element={
             <AuthWrapper isAuthenticated={isAuthenticated}>
-              <ProfileForm signOut={signOut} />
+              <ProfileForm/>
             </AuthWrapper>
           }
         />
@@ -103,10 +98,10 @@ function App() {
           }
         />
         <Route
-          path="/ranking"
+          path="/profileview/:username"
           element={
             <AuthWrapper isAuthenticated={isAuthenticated}>
-              <Ranking signOut={signOut} />
+              <ProfileView />
             </AuthWrapper>
           }
         />
@@ -118,8 +113,7 @@ function App() {
             </AuthWrapper>
           }
         />
-        {/* Fallback route */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ThemeProvider>
   );
