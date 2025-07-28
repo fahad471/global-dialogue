@@ -1,4 +1,3 @@
-// import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
@@ -21,35 +20,52 @@ export default function HomePage() {
       {/* Main content */}
       <main className="flex-grow">
         {/* Hero Section */}
-        <section className="flex flex-col items-center justify-center text-center px-4 py-24 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-background)]">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4">
-            MicSpot: Real Talk Across Differences
+        <section
+          className="relative flex flex-col items-center justify-center text-center px-6 py-32 bg-gradient-to-b from-[var(--color-surface)] to-[var(--color-background)] overflow-hidden"
+        >
+          {/* Background logo */}
+          <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
+            <img
+              src="/assets/logo.png" // <-- replace with your logo path
+              alt="Zynqer logo background"
+              className="opacity-30 dark:opacity-5 max-w-xs md:max-w-lg select-none"
+              style={{
+                filter: "grayscale(100%) blur(1.5px)",
+                userSelect: "none",
+                transform: "translateY(2%)", // lowers the logo by 20%
+              }}
+            />
+          </div>
+
+          {/* Foreground content */}
+          <h1 className="relative text-5xl md:text-7xl font-extrabold mb-6 leading-tight text-[var(--color-text)]">
+            Zynqer: Real Talk Across Differences
           </h1>
-          <p className="text-lg md:text-xl text-[var(--color-mutedText)] max-w-2xl mb-8">
-            Join live video conversations with people around the world — matched by beliefs, values, and curiosity.
+          <p className="relative max-w-3xl text-lg md:text-xl text-[var(--color-mutedText)] mb-10 leading-relaxed">
+            Step into a space where your voice matters — where curiosity, respect, and honest conversation bridge divides. Connect with people from all walks of life, and explore ideas beyond your own worldview.
           </p>
-          <div className="flex gap-4">
+          <div className="relative flex gap-6">
             <Button
               onClick={handleJoinClick}
-              className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-6 py-2 rounded-xl text-lg"
+              className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white px-8 py-3 rounded-2xl text-lg shadow-md"
             >
               Join the Conversation
             </Button>
             <Button
               onClick={() => navigate("/learn-more")}
               variant="outline"
-              className="text-white border-[var(--color-border)] hover:border-white"
+              className="text-white border-[var(--color-border)] hover:border-white px-8 py-3 rounded-2xl text-lg"
             >
               Learn More
             </Button>
           </div>
         </section>
 
-        {/* What is MicSpot */}
+        {/* What is Zynqer */}
         <section className="py-20 px-6 max-w-5xl mx-auto text-center">
-          <h2 className="text-3xl font-semibold mb-6">What is MicSpot?</h2>
+          <h2 className="text-3xl font-semibold mb-6">What is Zynqer?</h2>
           <p className="text-[var(--color-secondaryText)] text-lg max-w-3xl mx-auto">
-            MicSpot is a structured space for meaningful conversations — where users disclose ideology, values, and preferences to enable transparent, respectful dialogue.
+            Zynqer is a structured space for meaningful conversations — where users disclose ideology, values, and preferences to enable transparent, respectful dialogue.
           </p>
           <div className="grid md:grid-cols-2 gap-10 mt-12">
             {[

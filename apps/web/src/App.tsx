@@ -7,6 +7,7 @@ import ProfileForm from "./components/ProfileForm";
 import ProfileView from "./components/ProfileView";
 import ChatRoom from "./components/ChatRoom";
 import MatchPreferences from "./components/MatchPreferences";
+import Live from "./components/Live";
 import Dashboard from "./pages/Dashboard";
 import AuthWrapper from "./components/AuthWrapper";
 import { supabase } from "./lib/supabaseClient";
@@ -110,6 +111,15 @@ function App() {
           element={
             <AuthWrapper isAuthenticated={isAuthenticated}>
               <MatchPreferences signOut={signOut} />
+            </AuthWrapper>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
+                <Route
+          path="/live"
+          element={
+            <AuthWrapper isAuthenticated={isAuthenticated}>
+              <Live />
             </AuthWrapper>
           }
         />

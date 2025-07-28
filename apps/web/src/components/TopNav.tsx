@@ -1,4 +1,5 @@
-import { FaMoon, FaSun, FaSignOutAlt } from "react-icons/fa";
+// import { FaMoon, FaSun, FaSignOutAlt } from "react-icons/fa";
+import { FaSignOutAlt } from "react-icons/fa";
 
 interface TopNavProps {
   theme: "light" | "dark";
@@ -6,22 +7,22 @@ interface TopNavProps {
   signOut: () => Promise<void>;
 }
 
-export default function TopNav({ theme, toggleTheme, signOut }: TopNavProps) {
+export default function TopNav({ signOut }: TopNavProps) {
   return (
     <header className="w-full sticky top-0 z-50 shadow-md flex items-center justify-between px-6 py-3 bg-surface text-text transition-colors duration-300">
       {/* Left - Logo and Site name */}
       <div className="flex items-center gap-3">
         <img
           src="/assets/logo.png"
-          alt="MicSpot Logo"
+          alt="Zynqer Logo"
           className="h-10 w-10 object-contain select-none"
         />
-        <span className="text-xl font-bold text-text">MicSpot</span>
+        <span className="text-xl font-bold text-text">Zynqer</span>
       </div>
 
       {/* Right controls */}
       <div className="flex items-center gap-6">
-        <button
+        {/* <button
           onClick={toggleTheme}
           aria-label="Toggle dark mode"
           title="Toggle dark mode"
@@ -38,7 +39,7 @@ export default function TopNav({ theme, toggleTheme, signOut }: TopNavProps) {
               Dark Mode
             </>
           )}
-        </button>
+        </button> */}
 
         <button
           onClick={signOut}

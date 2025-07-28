@@ -19,6 +19,7 @@ type ClientData = {
   ideologicalStance?: string;
   personalityType?: string;
   coreBeliefs?: string[];
+  profileNationality?: string | null; // Added: nationality from profiles table
   inRoom: boolean;
   roomId?: string;
 };
@@ -39,10 +40,9 @@ export function createMatchmaker() {
             return;
           }
 
-          // Handle reconnection
+          // Reconnection handling
           const existingClient = clients.get(userId);
           if (existingClient) {
-            console.log(`User ${userId} reconnected, closing old socket`);
             existingClient.ws.close();
             removeFromQueue(userId);
           }
@@ -55,6 +55,7 @@ export function createMatchmaker() {
               ideological_stance,
               personality_type,
               core_beliefs,
+              nationality,
               user_selected_topics (
                 topic:topic_id,
                 stance
@@ -64,12 +65,11 @@ export function createMatchmaker() {
             .single();
 
           if (profileError || !profileData) {
-            console.error('Error fetching profile data:', profileError);
             sendMessage(ws, { type: 'error', message: 'Profile fetch error' });
             return;
           }
 
-          // Fetch match preferences
+          // Fetch preferences
           const { data: prefData, error: prefError } = await supabase
             .from('user_match_preferences')
             .select('preferred_match_type, language, nationality')
@@ -77,17 +77,15 @@ export function createMatchmaker() {
             .maybeSingle();
 
           if (prefError) {
-            console.error('Error fetching user match preferences:', prefError);
+            console.error('Error fetching match preferences:', prefError);
           }
-
-          const preferredMatchType = prefData?.preferred_match_type || 'random';
 
           const clientData: ClientData = {
             ws,
             userId,
             username: profileData.username,
             preferences: {
-              matchType: preferredMatchType,
+              matchType: prefData?.preferred_match_type || 'random',
               topics: profileData.user_selected_topics?.map((t: any) => ({
                 topic: t.topic,
                 stance: t.stance,
@@ -98,27 +96,31 @@ export function createMatchmaker() {
             ideologicalStance: profileData.ideological_stance,
             personalityType: profileData.personality_type,
             coreBeliefs: profileData.core_beliefs,
+            profileNationality: profileData.nationality ?? null, // Set profile nationality
             inRoom: false,
           };
 
           clients.set(userId, clientData);
           enqueue(userId);
           tryMatch();
+        }
 
-        } else if (data.type === 'chat') {
-          const senderUserId = getUserIdByWs(ws);
-          if (!senderUserId) return;
+        else if (data.type === 'chat') {
+          const senderId = getUserIdByWs(ws);
+          if (!senderId) return;
 
-          const sender = clients.get(senderUserId);
+          const sender = clients.get(senderId);
           if (sender?.roomId) {
             broadcastToRoom(sender.roomId, ws, data.message);
           }
+        }
 
-        } else if (data.type === 'signal') {
-          const senderUserId = getUserIdByWs(ws);
-          if (!senderUserId) return;
-          const sender = clients.get(senderUserId);
-          if (!sender || !sender.roomId) return;
+        else if (data.type === 'signal') {
+          const senderId = getUserIdByWs(ws);
+          if (!senderId) return;
+
+          const sender = clients.get(senderId);
+          if (!sender?.roomId) return;
 
           for (const client of clients.values()) {
             if (client.roomId === sender.roomId && client.ws !== ws) {
@@ -131,8 +133,9 @@ export function createMatchmaker() {
             }
           }
         }
+
       } catch (err) {
-        console.error('Error processing message:', err);
+        console.error('Error handling message:', err);
       }
     });
 
@@ -145,15 +148,15 @@ export function createMatchmaker() {
   }
 
   function getUserIdByWs(ws: WebSocket): string | undefined {
-    for (const [userId, client] of clients.entries()) {
-      if (client.ws === ws) return userId;
+    for (const [id, client] of clients.entries()) {
+      if (client.ws === ws) return id;
     }
     return undefined;
   }
 
-  function sendMessage(ws: WebSocket, message: any) {
+  function sendMessage(ws: WebSocket, msg: any) {
     if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(message));
+      ws.send(JSON.stringify(msg));
     }
   }
 
@@ -172,27 +175,22 @@ export function createMatchmaker() {
       }
     }
 
-    removeFromQueue(userId);
     clients.delete(userId);
+    removeFromQueue(userId);
     tryMatch();
   }
 
   function enqueue(userId: string) {
     if (!waitingQueue.has(userId)) {
       waitingQueue.add(userId);
-      console.log(`Enqueued client: ${userId}`);
     }
   }
 
   function removeFromQueue(userId: string) {
-    if (waitingQueue.has(userId)) {
-      waitingQueue.delete(userId);
-      console.log(`Removed client from queue: ${userId}`);
-    }
+    waitingQueue.delete(userId);
   }
 
   function tryMatch() {
-    console.log('Trying to match clients. Queue length:', waitingQueue.size);
     const queueArray = Array.from(waitingQueue);
     const buckets = new Map<string, ClientData[]>();
 
@@ -200,8 +198,8 @@ export function createMatchmaker() {
       const client = clients.get(userId);
       if (!client || client.inRoom) continue;
 
-      const { matchType, language, nationality } = client.preferences;
-      const bucketKey = `${matchType}|${language ?? ''}|${nationality ?? ''}`;
+      const { matchType, language } = client.preferences;
+      const bucketKey = `${matchType}|${language ?? ''}`;
 
       if (!buckets.has(bucketKey)) {
         buckets.set(bucketKey, []);
@@ -219,13 +217,13 @@ export function createMatchmaker() {
           if (!b || b.inRoom) continue;
 
           if (canMatch(a, b)) {
-            // Match found
-            waitingQueue.delete(a.userId);
-            waitingQueue.delete(b.userId);
-
             const roomId = `room-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
             a.roomId = b.roomId = roomId;
             a.inRoom = b.inRoom = true;
+
+            waitingQueue.delete(a.userId);
+            waitingQueue.delete(b.userId);
 
             sendMessage(a.ws, {
               type: 'matched',
@@ -241,7 +239,7 @@ export function createMatchmaker() {
               peerUsername: a.username,
             });
 
-            return tryMatch();
+            return tryMatch(); // Continue matching others
           }
         }
       }
@@ -251,49 +249,41 @@ export function createMatchmaker() {
   function canMatch(a: ClientData, b: ClientData): boolean {
     if (a.preferences.matchType !== b.preferences.matchType) return false;
 
-    const aCriteria = new Set<string>();
-    const bCriteria = new Set<string>();
-
-    if (a.preferences.language) aCriteria.add(`language:${a.preferences.language}`);
-    if (a.preferences.nationality) aCriteria.add(`nationality:${a.preferences.nationality}`);
-    if (b.preferences.language) bCriteria.add(`language:${b.preferences.language}`);
-    if (b.preferences.nationality) bCriteria.add(`nationality:${b.preferences.nationality}`);
-
-    if (aCriteria.size > 0 && bCriteria.size > 0) {
-      if (aCriteria.size !== bCriteria.size) return false;
-      for (const crit of aCriteria) {
-        if (!bCriteria.has(crit)) return false;
-      }
-    } else if (aCriteria.size > 0 || bCriteria.size > 0) {
+    // Language must match (unchanged)
+    if (a.preferences.language && b.preferences.language) {
+      if (a.preferences.language !== b.preferences.language) return false;
+    } else if (a.preferences.language || b.preferences.language) {
       return false;
     }
+
+    // Nationality (modified): a.pref vs b.profile AND b.pref vs a.profile
+    if (
+      a.preferences.nationality &&
+      a.preferences.nationality !== b.profileNationality
+    ) return false;
+
+    if (
+      b.preferences.nationality &&
+      b.preferences.nationality !== a.profileNationality
+    ) return false;
 
     switch (a.preferences.matchType) {
       case 'random':
         return true;
-
       case 'similar':
         return (
           a.ideologicalStance === b.ideologicalStance &&
           a.personalityType === b.personalityType
         );
-
       case 'opposite':
         return a.ideologicalStance !== b.ideologicalStance;
-
       case 'topic':
-        for (const aTopic of a.preferences.topics) {
-          for (const bTopic of b.preferences.topics) {
-            if (
-              aTopic.topic === bTopic.topic &&
-              aTopic.stance !== bTopic.stance
-            ) {
-              return true;
-            }
-          }
-        }
-        return false;
-
+        return a.preferences.topics.some((aTopic) =>
+          b.preferences.topics.some(
+            (bTopic) =>
+              aTopic.topic === bTopic.topic && aTopic.stance !== bTopic.stance
+          )
+        );
       default:
         return false;
     }

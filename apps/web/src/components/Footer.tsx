@@ -8,7 +8,7 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between gap-8">
         {/* Left: Branding */}
         <div>
-          <h3 className="text-white text-xl font-semibold mb-2">MicSpot</h3>
+          <h3 className="text-white text-xl font-semibold mb-2">Zynqer</h3>
           <p className="text-sm max-w-sm">
             Real talk across differences. Join structured conversations powered by curiosity and transparency.
           </p>
@@ -48,7 +48,7 @@ export default function Footer() {
       </div>
 
       <div className="mt-10 border-t border-border pt-6 text-center text-xs text-mutedText">
-        © {new Date().getFullYear()} MicSpot. All rights reserved.
+        © {new Date().getFullYear()} Zynqer. All rights reserved.
       </div>
     </footer>
   );

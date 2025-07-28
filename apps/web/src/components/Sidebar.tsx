@@ -2,10 +2,10 @@ import { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import {
   FaHome,
-  FaUsers,
-  FaComments,
-  FaGraduationCap,
-  FaBookOpen,
+  FaUserFriends,
+  FaMicrophoneAlt,
+  FaTrophy,
+  FaPlayCircle,
   FaCog,
 } from "react-icons/fa";
 import { supabase } from "../lib/supabaseClient";
@@ -13,10 +13,10 @@ import { useAuth } from "../context/AuthProvider";
 
 const navItems = [
   { label: "Dashboard", path: "/dashboard", icon: <FaHome size={20} /> },
-  { label: "Preferences", path: "/matchpreferences", icon: <FaUsers size={20} /> },
-  { label: "Live Chats", path: "/chat", icon: <FaComments size={20} /> },
-  { label: "Rankings", path: "/rankings", icon: <FaGraduationCap size={20} /> },
-  { label: "Discovery", path: "/discovery", icon: <FaBookOpen size={20} /> },
+  { label: "Preferences", path: "/matchpreferences", icon: <FaUserFriends size={20} /> },
+  { label: "Zynq", path: "/chat", icon: <FaMicrophoneAlt size={20} /> },
+  { label: "Rankings", path: "/rankings", icon: <FaTrophy size={20} /> },
+  { label: "Live", path: "/live", icon: <FaPlayCircle size={20} /> },
   { label: "Profile", path: "/profile", icon: <FaCog size={20} /> },
 ];
 
