@@ -21,6 +21,10 @@ export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
   const [selectedTopicsWithStance, setSelectedTopicsWithStance] = useState<{ id: string; stance: "for" | "against" }[]>([]);
   const [language, setLanguage] = useState("");
   const [nationality, setNationality] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string>("Social Issues"); // Default to one category
+
+  const filteredTopics = topics.filter((t) => t.category === activeCategory);
+
 
   const { user } = auth || {};
 
@@ -193,13 +197,32 @@ export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
             {/* Topic Selection */}
             {matchType === "topic" && (
               <section className="pt-4">
-                <h2 className="text-xl font-semibold mb-4">Select Topics</h2>
+                <h2 className="text-xl font-semibold mb-4">Select Topics by Category</h2>
+
+                {/* Step 1: Category Selector */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  {Array.from(new Set(topics.map((topic) => topic.category))).map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setActiveCategory(cat)}
+                      className={`px-3 py-1 rounded-full border text-sm font-medium transition ${
+                        activeCategory === cat
+                          ? "bg-primary text-white border-primary"
+                          : "bg-muted text-text border-secondaryText hover:border-primary"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Step 2: Filtered Topics List */}
                 <div className="border border-secondaryText rounded-lg bg-muted p-4 max-h-[400px] overflow-y-auto">
-                  {topics.length === 0 ? (
-                    <p className="text-sm italic text-tertiaryText">No topics available</p>
+                  {filteredTopics.length === 0 ? (
+                    <p className="text-sm italic text-tertiaryText">No topics available in this category</p>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                      {topics.map((topic) => {
+                      {filteredTopics.map((topic) => {
                         const selected = selectedTopicsWithStance.find((t) => t.id === topic.id);
                         return (
                           <div key={topic.id} className="flex flex-col bg-background p-3 rounded-lg shadow-sm border border-secondaryText">
@@ -228,6 +251,7 @@ export default function MatchPreferences({ signOut }: MatchPreferencesProps) {
                   )}
                 </div>
               </section>
+
             )}
 
             {/* Save + Find Buttons */}
