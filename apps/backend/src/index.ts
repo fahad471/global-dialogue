@@ -11,11 +11,7 @@ wss.on('connection', (ws) => {
   matchmaker.addClient(ws);
 
   ws.on('message', async (data) => {
-    console.log('Received raw message:', data.toString());
-
     const userId = matchmaker.getUserIdByWs(ws);
-    console.log('UserId for this ws:', userId);
-
     if (!userId) {
       ws.send(JSON.stringify({ error: 'Unauthorized' }));
       return;
@@ -24,16 +20,12 @@ wss.on('connection', (ws) => {
     let parsed;
     try {
       parsed = JSON.parse(data.toString());
-      console.log('Parsed message:', parsed);
-    } catch (err) {
+    } catch {
       ws.send(JSON.stringify({ error: 'Invalid JSON' }));
-      console.log('Invalid JSON:', err);
       return;
     }
 
-    // Fix here: check that parsed.message is an object with text string
     if (parsed.type !== 'chat' || typeof parsed.message !== 'object' || typeof parsed.message.text !== 'string') {
-      console.log('Ignoring non-chat or invalid message:', parsed);
       return;
     }
 
@@ -53,7 +45,7 @@ wss.on('connection', (ws) => {
 
       const { analysis } = result;
 
-      const { error } = await supabase
+      await supabase
         .from('messages')
         .insert({
           user_id: userId,
@@ -65,10 +57,6 @@ wss.on('connection', (ws) => {
           reasoning: analysis.reasoning,
           created_at: new Date().toISOString(),
         });
-
-      if (error) {
-        console.error('Failed to save message:', error.message);
-      }
 
       const outgoing = JSON.stringify({
         sender: userId,
@@ -82,8 +70,7 @@ wss.on('connection', (ws) => {
           client.send(outgoing);
         }
       });
-    } catch (err) {
-      console.error('Unexpected error:', err);
+    } catch {
       ws.send(JSON.stringify({ error: 'Internal server error' }));
     }
   });
@@ -91,15 +78,8 @@ wss.on('connection', (ws) => {
   ws.on('close', async () => {
     const userId = matchmaker.getUserIdByWs(ws);
     if (userId) {
-      const { data, error } = await supabase.auth.admin.getUserById(userId);
-      if (error) {
-        console.error(`Failed to fetch user ${userId}:`, error.message);
-      } else {
-        console.log(`Disconnected: ${data?.user?.email}`);
-      }
+      await supabase.auth.admin.getUserById(userId); // Fire and forget
       matchmaker.removeClient(userId);
-    } else {
-      console.error('UserId not found for websocket');
     }
   });
 });

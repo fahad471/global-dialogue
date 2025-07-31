@@ -19,7 +19,7 @@ type ClientData = {
   ideologicalStance?: string;
   personalityType?: string;
   coreBeliefs?: string[];
-  profileNationality?: string | null; // Added: nationality from profiles table
+  profileNationality?: string | null;
   inRoom: boolean;
   roomId?: string;
 };
@@ -48,7 +48,7 @@ export function createMatchmaker() {
           }
 
           // Fetch profile data
-          const { data: profileData, error: profileError } = await supabase
+          const { data: profileData } = await supabase
             .from('profiles')
             .select(`
               username,
@@ -64,21 +64,17 @@ export function createMatchmaker() {
             .eq('id', userId)
             .single();
 
-          if (profileError || !profileData) {
+          if (!profileData) {
             sendMessage(ws, { type: 'error', message: 'Profile fetch error' });
             return;
           }
 
           // Fetch preferences
-          const { data: prefData, error: prefError } = await supabase
+          const { data: prefData } = await supabase
             .from('user_match_preferences')
             .select('preferred_match_type, language, nationality')
             .eq('id', userId)
             .maybeSingle();
-
-          if (prefError) {
-            console.error('Error fetching match preferences:', prefError);
-          }
 
           const clientData: ClientData = {
             ws,
@@ -96,7 +92,7 @@ export function createMatchmaker() {
             ideologicalStance: profileData.ideological_stance,
             personalityType: profileData.personality_type,
             coreBeliefs: profileData.core_beliefs,
-            profileNationality: profileData.nationality ?? null, // Set profile nationality
+            profileNationality: profileData.nationality ?? null,
             inRoom: false,
           };
 
@@ -134,8 +130,8 @@ export function createMatchmaker() {
           }
         }
 
-      } catch (err) {
-        console.error('Error handling message:', err);
+      } catch {
+        // Silent error handling
       }
     });
 
@@ -183,12 +179,22 @@ export function createMatchmaker() {
   function enqueue(userId: string) {
     if (!waitingQueue.has(userId)) {
       waitingQueue.add(userId);
+      // logQueue();
     }
   }
 
   function removeFromQueue(userId: string) {
-    waitingQueue.delete(userId);
+    if (waitingQueue.delete(userId)) {
+      // logQueue();
+    }
   }
+
+  function logQueue() {
+    const usernames = Array.from(waitingQueue)
+      .map((id) => clients.get(id)?.username || 'Unknown');
+    console.log(`Queue (${waitingQueue.size}): [${usernames.join(', ')}]`);
+  }
+
 
   function tryMatch() {
     const queueArray = Array.from(waitingQueue);
@@ -208,13 +214,15 @@ export function createMatchmaker() {
     }
 
     for (const [, group] of buckets.entries()) {
+      let matched = new Set<string>();
+
       for (let i = 0; i < group.length; i++) {
         const a = group[i];
-        if (!a || a.inRoom) continue;
+        if (!a || a.inRoom || matched.has(a.userId)) continue;
 
         for (let j = i + 1; j < group.length; j++) {
           const b = group[j];
-          if (!b || b.inRoom) continue;
+          if (!b || b.inRoom || matched.has(b.userId)) continue;
 
           if (canMatch(a, b)) {
             const roomId = `room-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -222,8 +230,11 @@ export function createMatchmaker() {
             a.roomId = b.roomId = roomId;
             a.inRoom = b.inRoom = true;
 
-            waitingQueue.delete(a.userId);
-            waitingQueue.delete(b.userId);
+            removeFromQueue(a.userId);
+            removeFromQueue(b.userId);
+
+            matched.add(a.userId);
+            matched.add(b.userId);
 
             sendMessage(a.ws, {
               type: 'matched',
@@ -239,24 +250,26 @@ export function createMatchmaker() {
               peerUsername: a.username,
             });
 
-            return tryMatch(); // Continue matching others
+            console.log(`✅ Matched: ${a.username} (${a.userId}) ↔ ${b.username} (${b.userId}) in room ${roomId}`);
+            break; // Move to next `a`
           }
         }
       }
     }
+
+    logQueue(); // Log remaining unmatched users
   }
+
 
   function canMatch(a: ClientData, b: ClientData): boolean {
     if (a.preferences.matchType !== b.preferences.matchType) return false;
 
-    // Language must match (unchanged)
     if (a.preferences.language && b.preferences.language) {
       if (a.preferences.language !== b.preferences.language) return false;
     } else if (a.preferences.language || b.preferences.language) {
       return false;
     }
 
-    // Nationality (modified): a.pref vs b.profile AND b.pref vs a.profile
     if (
       a.preferences.nationality &&
       a.preferences.nationality !== b.profileNationality
