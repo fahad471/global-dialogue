@@ -2,7 +2,17 @@ import { createContext, useContext, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
 
-const MatchmakingContext = createContext(null);
+interface MatchmakingContextType {
+  isQueued: boolean;
+  joinQueue: () => void;
+  leaveQueue: () => void;
+  matchOffer: { username: string; roomId: string } | null;
+  acceptMatch: () => void;
+  declineMatch: () => void;
+}
+
+const MatchmakingContext = createContext<MatchmakingContextType | null>(null);
+
 
 export function MatchmakingProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -10,7 +20,7 @@ export function MatchmakingProvider({ children }: { children: React.ReactNode })
 
   const [isQueued, setIsQueued] = useState(false);
   const [matchOffer, setMatchOffer] = useState<{ username: string; roomId: string } | null>(null);
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  // const [ws, setWs] = useState<WebSocket | null>(null);
 
   useEffect(() => {
     if (!isQueued || !user) return;
@@ -33,10 +43,10 @@ export function MatchmakingProvider({ children }: { children: React.ReactNode })
     };
 
     socket.onclose = () => {
-      setWs(null);
+      // setWs(null);
     };
 
-    setWs(socket);
+    // setWs(socket);
 
     return () => {
       socket.close();
@@ -77,6 +87,11 @@ export function MatchmakingProvider({ children }: { children: React.ReactNode })
   );
 }
 
-export function useMatchmaking() {
-  return useContext(MatchmakingContext);
+export function useMatchmaking(): MatchmakingContextType {
+  const context = useContext(MatchmakingContext);
+  if (!context) {
+    throw new Error("useMatchmaking must be used within a MatchmakingProvider");
+  }
+  return context;
 }
+
