@@ -3,7 +3,8 @@ import 'dotenv/config';
 import { createMatchmaker } from './matchmaker/matchmaker';
 import { supabaseAdmin as supabase } from './matchmaker/supabaseAdmin';
 import { moderateAndAnalyzeMessage } from './matchmaker/moderateAndAnalyze';
-
+import { generateMockUsers } from './test/mockUsers';
+generateMockUsers(100000);
 const wss = new WebSocket.Server({ port: 8080 });
 const matchmaker = createMatchmaker();
 

@@ -16,17 +16,26 @@ export default function LiveStreamPromo() {
           Experience real conversations — streamed live.<br />
           Watch authentic dialogues unfold in real time, challenge ideas, and learn from every perspective.
         </p>
-        <a
-          href="/signup"
-          className="bg-[var(--color-primary)] hover:bg-[var(--color-primary-hover)] text-white text-xl font-semibold px-12 py-4 rounded-xl transition"
+        <h2
+          className="text-red-600 text-4xl font-bold px-12 py-4 rounded-xl transition"
+          style={{
+            textShadow: `
+              0 0 2px #ff0000,
+              0 0 4px #ff4d4d
+            `
+          }}
         >
-          Get Early Access
-        </a>
+          Coming Soon
+        </h2>
+
+
+
+
       </section>
 
       {/* Features Highlight */}
       <section className="max-w-5xl mx-auto px-6 py-20">
-        <h2 className="text-4xl font-bold mb-10 text-center">Why Watch Zynqer Live?</h2>
+        <h2 className="text-4xl font-bold mb-10 text-center">Be a Part of The Converation with Zynqer Live</h2>
         <div className="grid md:grid-cols-3 gap-10 text-center">
           {[
             {
